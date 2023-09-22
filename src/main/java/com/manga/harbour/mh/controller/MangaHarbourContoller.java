@@ -15,7 +15,7 @@ public class MangaHarbourContoller {
 	@Autowired
 	private MangaHarbourService mangaService;
 
-	@GetMapping("/")
+	@GetMapping("/manga/random")
 	public String getManga() {
 		return mangaService.getMangaById();
 	}
