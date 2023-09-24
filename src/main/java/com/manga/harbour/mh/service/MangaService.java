@@ -10,13 +10,13 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.tomcat.util.http.parser.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.manga.harbour.mh.entity.Chapter;
@@ -36,72 +36,90 @@ public class MangaService {
 		this.client = webClientBuilder.baseUrl("https://api.mangadex.org").build();
 		this.executorService = Executors.newScheduledThreadPool(1);
 	}
-	
+
 	public Mono<Object> getMangaDetails(String title) {
-	    UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl("https://api.mangadex.org")
-	            .path("manga")
-	            .queryParam("limit", 4)
-	            .queryParam("title", title)
-	            .queryParam("includes[]", "cover_art")
-	            .queryParam("contentRating[]", "safe", "suggestive", "erotica", "pornographic");
+		UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl("https://api.mangadex.org")
+				.path("manga")
+				.queryParam("limit", 4)
+				.queryParam("title", title)
+				.queryParam("includes[]", "cover_art")
+				.queryParam("contentRating[]", "safe", "suggestive", "erotica", "pornographic");
 
-	    Mono<String> mangaResponse = client.get()
-	            .uri(builder.build().toUriString())
-	            .retrieve()
-	            .bodyToMono(String.class)
-	            .onErrorResume(throwable -> Mono.empty());
+		Mono<String> mangaResponse = client.get()
+				.uri(builder.build().toUriString())
+				.retrieve()
+				.bodyToMono(String.class)
+				.onErrorResume(throwable -> Mono.empty());
 
-	    return mangaResponse.flatMap(mangaData -> {
-	        MultiValueMap<String, String> queryParams = new LinkedMultiValueMap<>();
-	        extractMangaIdsFromResponse(mangaData).forEach(id -> queryParams.add("manga[]", id));
-	        UriComponentsBuilder statsBuilder = UriComponentsBuilder.fromPath("statistics/manga")
-	                .queryParams(queryParams);
+		return mangaResponse.flatMap(mangaData -> {
+			MultiValueMap<String, String> queryParams = new LinkedMultiValueMap<>();
+			extractMangaIdsFromResponse(mangaData).forEach(id -> queryParams.add("manga[]", id));
+			UriComponentsBuilder statsBuilder = UriComponentsBuilder.fromPath("statistics/manga")
+					.queryParams(queryParams);
 
-	        Mono<String> statsResponse = client.get()
-	                .uri(statsBuilder.build().toUriString())
-	                .retrieve()
-	                .bodyToMono(String.class)
-	                .onErrorResume(throwable -> Mono.empty());
+			Mono<String> statsResponse = client.get()
+					.uri(statsBuilder.build().toUriString())
+					.retrieve()
+					.bodyToMono(String.class)
+					.onErrorResume(throwable -> Mono.empty());
 
-	        return statsResponse.map(statsData -> {
-	                    Map<String, Object> data = new HashMap<>();
-	                    try {
-	                        ObjectMapper objectMapper = new ObjectMapper();
-	                        Object mangaObject = objectMapper.readValue(mangaData, Object.class);
-	                        Object statsObject = objectMapper.readValue(statsData, Object.class);
+			return statsResponse.map(statsData -> {
+				Map<String, Object> data3 = new HashMap<>();
+				try {
+					ObjectMapper objectMapper = new ObjectMapper();
+					Map<String, Object> mangaObject = objectMapper.readValue(mangaData, new TypeReference<Map<String, Object>>() {});
+					Map<String, Object> statsObject = objectMapper.readValue(statsData, new TypeReference<Map<String, Object>>() {});
+					if (mangaObject.containsKey("data") && mangaObject.get("data") instanceof List) {
+						List<Map<String, Object>> mangaList = (List<Map<String, Object>>) mangaObject.get("data");
+						for (Map<String, Object> mangaItem : mangaList) {
+							List<Map<String, Object>> relationshipsList = (List<Map<String, Object>>) mangaItem.get("relationships");
+							String mangaId = mangaItem.get("id").toString();
+							for (Map<String, Object> relationship : relationshipsList) {
+								if ("cover_art".equals(relationship.get("type"))) {
+									String fileName = ((Map<String, Object>) relationship.get("attributes")).get("fileName").toString();
+									String imageUrl = "https://uploads.mangadex.org/covers/" + mangaId + "/" + fileName;
+									mangaItem.put("image", imageUrl);
+									break; 
+								}
+							}
+						}
+					}
 
-	                        data.put("mangaData", mangaObject);
-	                        data.put("statsResponse", statsObject);
-	                    } catch (Exception e) {
-	                        e.printStackTrace();
-	                    }
-	                    return data;
-	                });
-	    });
+					Map<String, Object> data = new HashMap<>();
+					data.put("mangaData", mangaObject);
+					data.put("statsResponse", statsObject);
+
+					return data;
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+				return null;
+			});
+		});
 	}
 
 
-	    private List<String> extractMangaIdsFromResponse(String mangaData) {
-	        List<String> mangaIds = new ArrayList<>();
+	private List<String> extractMangaIdsFromResponse(String mangaData) {
+		List<String> mangaIds = new ArrayList<>();
 
-	        try {
-	            ObjectMapper objectMapper = new ObjectMapper();
-	            JsonNode rootNode = objectMapper.readTree(mangaData);
+		try {
+			ObjectMapper objectMapper = new ObjectMapper();
+			JsonNode rootNode = objectMapper.readTree(mangaData);
 
-	            if (rootNode.has("data") && rootNode.get("data").isArray()) {
-	                for (JsonNode mangaNode : rootNode.get("data")) {
-	                    if (mangaNode.has("id")) {
-	                        mangaIds.add(mangaNode.get("id").asText());
-	                    }
-	                }
-	            }
-	        } catch (IOException e) {
-	            e.printStackTrace(); // Handle the exception as needed
-	        }
+			if (rootNode.has("data") && rootNode.get("data").isArray()) {
+				for (JsonNode mangaNode : rootNode.get("data")) {
+					if (mangaNode.has("id")) {
+						mangaIds.add(mangaNode.get("id").asText());
+					}
+				}
+			}
+		} catch (IOException e) {
+			e.printStackTrace(); 
+		}
 
-	        return mangaIds;
-	    }
-	
+		return mangaIds;
+	}
+
 	public List<MangaVolumeDTO> getMangaChapterListById(String id) {
 		String mangaData = client.get().uri("/manga/" + id + "/aggregate?translatedLanguage[0]=en").retrieve().bodyToMono(String.class).block();
 		return prepareChapterList(mangaData);
@@ -183,7 +201,7 @@ public class MangaService {
 					Map<String, Object> chapterData = (Map<String, Object>) chapterEntry.getValue();
 					Chapter chapterDTO = new Chapter();
 					chapterDTO.setId((String) chapterData.get("id"));
-//					chapterDTO.setOthers((List<String>) chapterData.get("others"));
+					//					chapterDTO.setOthers((List<String>) chapterData.get("others"));
 					chapterDTO.setChapter(chapterNumber);
 					List<String> imageUrls = getImageUrlsForChapter((String) chapterData.get("id"));
 					if(imageUrls.isEmpty()) {
@@ -206,7 +224,7 @@ public class MangaService {
 				mangaVolume.setChapters(chapters);
 				mangaVolumes.add(mangaVolume);
 			}
-			
+
 			return mangaVolumes;
 		} catch (IOException e) {
 			e.printStackTrace();
