@@ -3,18 +3,27 @@ package com.manga.harbour.mh.service;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.tomcat.util.http.parser.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.util.UriComponentsBuilder;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.manga.harbour.mh.entity.Chapter;
 import com.manga.harbour.mh.entity.MangaVolumeDTO;
+
+import reactor.core.publisher.Mono;
+
 import com.manga.harbour.mh.entity.Image;
 
 @Service
@@ -27,7 +36,72 @@ public class MangaService {
 		this.client = webClientBuilder.baseUrl("https://api.mangadex.org").build();
 		this.executorService = Executors.newScheduledThreadPool(1);
 	}
+	
+	public Mono<Object> getMangaDetails(String title) {
+	    UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl("https://api.mangadex.org")
+	            .path("manga")
+	            .queryParam("limit", 4)
+	            .queryParam("title", title)
+	            .queryParam("includes[]", "cover_art")
+	            .queryParam("contentRating[]", "safe", "suggestive", "erotica", "pornographic");
 
+	    Mono<String> mangaResponse = client.get()
+	            .uri(builder.build().toUriString())
+	            .retrieve()
+	            .bodyToMono(String.class)
+	            .onErrorResume(throwable -> Mono.empty());
+
+	    return mangaResponse.flatMap(mangaData -> {
+	        MultiValueMap<String, String> queryParams = new LinkedMultiValueMap<>();
+	        extractMangaIdsFromResponse(mangaData).forEach(id -> queryParams.add("manga[]", id));
+	        UriComponentsBuilder statsBuilder = UriComponentsBuilder.fromPath("statistics/manga")
+	                .queryParams(queryParams);
+
+	        Mono<String> statsResponse = client.get()
+	                .uri(statsBuilder.build().toUriString())
+	                .retrieve()
+	                .bodyToMono(String.class)
+	                .onErrorResume(throwable -> Mono.empty());
+
+	        return statsResponse.map(statsData -> {
+	                    Map<String, Object> data = new HashMap<>();
+	                    try {
+	                        ObjectMapper objectMapper = new ObjectMapper();
+	                        Object mangaObject = objectMapper.readValue(mangaData, Object.class);
+	                        Object statsObject = objectMapper.readValue(statsData, Object.class);
+
+	                        data.put("mangaData", mangaObject);
+	                        data.put("statsResponse", statsObject);
+	                    } catch (Exception e) {
+	                        e.printStackTrace();
+	                    }
+	                    return data;
+	                });
+	    });
+	}
+
+
+	    private List<String> extractMangaIdsFromResponse(String mangaData) {
+	        List<String> mangaIds = new ArrayList<>();
+
+	        try {
+	            ObjectMapper objectMapper = new ObjectMapper();
+	            JsonNode rootNode = objectMapper.readTree(mangaData);
+
+	            if (rootNode.has("data") && rootNode.get("data").isArray()) {
+	                for (JsonNode mangaNode : rootNode.get("data")) {
+	                    if (mangaNode.has("id")) {
+	                        mangaIds.add(mangaNode.get("id").asText());
+	                    }
+	                }
+	            }
+	        } catch (IOException e) {
+	            e.printStackTrace(); // Handle the exception as needed
+	        }
+
+	        return mangaIds;
+	    }
+	
 	public List<MangaVolumeDTO> getMangaChapterListById(String id) {
 		String mangaData = client.get().uri("/manga/" + id + "/aggregate?translatedLanguage[0]=en").retrieve().bodyToMono(String.class).block();
 		return prepareChapterList(mangaData);
@@ -103,7 +177,7 @@ public class MangaService {
 				for (Map.Entry<String, Object> chapterEntry : chaptersMap.entrySet()) {
 					String chapterNumber = chapterEntry.getKey();
 					if (selectedChapter != null && !selectedChapter.equals(chapterNumber)) {
-						continue; // Skip this chapter if it's not the selected one
+						continue;
 					}
 
 					Map<String, Object> chapterData = (Map<String, Object>) chapterEntry.getValue();
@@ -132,7 +206,7 @@ public class MangaService {
 				mangaVolume.setChapters(chapters);
 				mangaVolumes.add(mangaVolume);
 			}
-
+			
 			return mangaVolumes;
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -154,7 +228,7 @@ public class MangaService {
 				String chapterHash = chapterData.get("hash").toString();
 				List<String> data = (List<String>) chapterData.get("data");
 				ScheduledExecutorService rateLimitedExecutor = Executors.newScheduledThreadPool(1);
-				int requestsPerMinute = 38;
+				int requestsPerMinute = 35;
 				int delayMilliseconds = 60 * 1000 / requestsPerMinute; 
 				for (String imageData : data) {
 					rateLimitedExecutor.schedule(() -> {

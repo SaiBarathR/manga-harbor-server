@@ -1,12 +1,6 @@
 package com.manga.harbour.mh.entity;
 
 import java.util.List;
-import java.util.Map;
-
-import com.fasterxml.jackson.annotation.JsonProperty;
-
-
-
 
 public class MangaVolumeDTO {
     private String volume;

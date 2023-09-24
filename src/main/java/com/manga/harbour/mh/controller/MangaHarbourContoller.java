@@ -10,8 +10,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.manga.harbour.mh.entity.MangaVolumeDTO;
 import com.manga.harbour.mh.service.MangaService;
+import reactor.core.publisher.Mono;
 
-@CrossOrigin(origins="http://localhost:3000")
+@CrossOrigin(origins="*")
 @RestController
 public class MangaHarbourContoller {
 	
@@ -28,6 +29,10 @@ public class MangaHarbourContoller {
 		return mangaVolumeBuiler.getMangaChapterListById(id);
 	}
 	
+	@GetMapping("/manga/search/{title}")
+	public Mono<Object>searchMangaDetails(@PathVariable String title) {
+		return mangaVolumeBuiler.getMangaDetails(title);
+	}
 	
 	@GetMapping("/manga/download/{id}")
 	public List<MangaVolumeDTO> getManga(@PathVariable String id) {
