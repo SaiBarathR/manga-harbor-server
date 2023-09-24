@@ -37,6 +37,16 @@ public class MangaService {
 		this.executorService = Executors.newScheduledThreadPool(1);
 	}
 
+	public List<MangaVolumeDTO> getMangaChapterListById(String id) {
+		String mangaData = client.get().uri("/manga/" + id + "/aggregate?translatedLanguage[0]=en").retrieve().bodyToMono(String.class).block();
+		return prepareChapterList(mangaData);
+	}
+
+	public List<MangaVolumeDTO> getMangaVolumesById(String id,String selectedVolume, String selectedChapter) {
+		String mangaData = client.get().uri("/manga/" + id + "/aggregate?translatedLanguage[0]=en").retrieve().bodyToMono(String.class).block();
+		return parseAndTransformMangaData(mangaData,selectedVolume,selectedChapter);
+	}
+
 	public Mono<Object> getMangaDetails(String title) {
 		UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl("https://api.mangadex.org")
 				.path("manga")
@@ -98,7 +108,6 @@ public class MangaService {
 		});
 	}
 
-
 	private List<String> extractMangaIdsFromResponse(String mangaData) {
 		List<String> mangaIds = new ArrayList<>();
 
@@ -118,16 +127,6 @@ public class MangaService {
 		}
 
 		return mangaIds;
-	}
-
-	public List<MangaVolumeDTO> getMangaChapterListById(String id) {
-		String mangaData = client.get().uri("/manga/" + id + "/aggregate?translatedLanguage[0]=en").retrieve().bodyToMono(String.class).block();
-		return prepareChapterList(mangaData);
-	}
-
-	public List<MangaVolumeDTO> getMangaVolumesById(String id,String selectedVolume, String selectedChapter) {
-		String mangaData = client.get().uri("/manga/" + id + "/aggregate?translatedLanguage[0]=en").retrieve().bodyToMono(String.class).block();
-		return parseAndTransformMangaData(mangaData,selectedVolume,selectedChapter);
 	}
 
 	private List<MangaVolumeDTO> prepareChapterList(String mangaData) {
@@ -231,8 +230,6 @@ public class MangaService {
 			return Collections.emptyList();
 		}
 	}
-
-
 
 	public List<String> getImageUrlsForChapter(String chapterId) {
 		List<String> imageUrls = new ArrayList<>();
