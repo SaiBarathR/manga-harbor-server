@@ -74,7 +74,6 @@ public class MangaService {
 					.onErrorResume(throwable -> Mono.empty());
 
 			return statsResponse.map(statsData -> {
-				Map<String, Object> data3 = new HashMap<>();
 				try {
 					ObjectMapper objectMapper = new ObjectMapper();
 					Map<String, Object> mangaObject = objectMapper.readValue(mangaData, new TypeReference<Map<String, Object>>() {});
