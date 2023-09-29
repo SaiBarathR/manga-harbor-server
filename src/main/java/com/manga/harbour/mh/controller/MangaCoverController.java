@@ -24,9 +24,6 @@ public class MangaCoverController {
 
 	@GetMapping
 	public ResponseEntity<Resource> getMangaCover(@RequestParam String url) {
-		Resource imageResource = mangaCoverService.convertImageUrlToResource(url);
-		return ResponseEntity.ok()
-				.contentType(MediaType.IMAGE_JPEG) // Set the content type for JPEG images
-				.body(imageResource);
+		return mangaCoverService.convertImageUrlToResource(url);		 
 	}
 }
