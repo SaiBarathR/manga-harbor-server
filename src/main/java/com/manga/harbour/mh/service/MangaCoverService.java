@@ -2,6 +2,8 @@ package com.manga.harbour.mh.service;
 
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
@@ -22,14 +24,16 @@ public class MangaCoverService {
 
 	}
 
-	public Resource convertImageUrlToResource(String imageUrl) {
+	public ResponseEntity<Resource>  convertImageUrlToResource(String imageUrl) {
 		byte[] imageData = retrieveImageData(imageUrl).block(); 
 		if (imageData != null) {
 			InputStream inputStream = new ByteArrayInputStream(imageData);
-			return new InputStreamResource(inputStream);
-		} else {
-			return getDefaultImageResource();
+			Resource imageResource = new InputStreamResource(inputStream);
+			return ResponseEntity.ok()
+					.contentType(MediaType.IMAGE_JPEG) // Set the content type for JPEG images
+					.body(imageResource);
 		}
+		return null;
 	}
 
 	private Mono<byte[]> retrieveImageData(String imageUrl) {
@@ -37,9 +41,5 @@ public class MangaCoverService {
 				.uri(imageUrl)
 				.retrieve()
 				.bodyToMono(byte[].class);
-	}
-
-	private Resource getDefaultImageResource() {
-		return null;
 	}
 }
