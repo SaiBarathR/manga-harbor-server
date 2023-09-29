@@ -36,7 +36,7 @@ public class MangaCoverService {
 		return null;
 	}
 
-	private Mono<byte[]> retrieveImageData(String imageUrl) {
+	public Mono<byte[]> retrieveImageData(String imageUrl) {
 		return client.get()
 				.uri(imageUrl)
 				.retrieve()
