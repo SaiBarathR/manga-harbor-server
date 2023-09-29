@@ -26,6 +26,13 @@ import reactor.core.publisher.Mono;
 
 import com.manga.harbour.mh.entity.Image;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
+
 @Service
 public class MangaService {
 
@@ -212,6 +219,7 @@ public class MangaService {
 						image.setUrl(imageUrl);
 						images.add(image);
 					}
+					System.out.println("Fetched Chapter: " + chapterNumber);
 					chapterDTO.setImages(images);
 					chapters.add(chapterDTO);
 				}
@@ -219,6 +227,7 @@ public class MangaService {
 				if(chapters.isEmpty()) {
 					continue;
 				}
+				System.out.println("Fetched volume: " + volumeNumber);
 				mangaVolume.setChapters(chapters);
 				mangaVolumes.add(mangaVolume);
 			}
@@ -259,5 +268,75 @@ public class MangaService {
 		}
 		return imageUrls;
 	}
+	
+	 public void downloadAndOrganizeImages(String mangaId, String selectedVolume, String selectedChapter) {
+	        List<MangaVolumeDTO> mangaVolumes = getMangaVolumesById(mangaId, selectedVolume, selectedChapter);
+
+	        // Create Manga folder
+	        File mangaFolder = new File("Manga");
+	        mangaFolder.mkdirs();
+
+	        for (MangaVolumeDTO volume : mangaVolumes) {
+	            String volumeNumber = volume.getVolume();
+	            File volumeFolder = new File(mangaFolder, "Volume " + volumeNumber);
+	            volumeFolder.mkdirs();
+
+	            for (Chapter chapter : volume.getChapters()) {
+	                String chapterNumber = chapter.getChapter();
+	                File chapterFolder = new File(volumeFolder, "Chapter " + chapterNumber);
+	                chapterFolder.mkdirs();
+
+	                // Download images for the chapter
+	                List<Image> images = chapter.getImages();
+	                for (int i = 0; i < images.size(); i++) {
+	                    String imageUrl = images.get(i).getUrl();
+	                    String imageName = "Image" + (i + 1) + ".png"; // You can generate a unique name here
+	                    downloadImage(imageUrl, new File(chapterFolder, imageName));
+	                }
+	            }
+
+	            // Create a zip file for the volume
+//	            createZipFile(volumeFolder.getPath(), "Volume" + volumeNumber + ".zip");
+	        }
+
+	        // Create a zip file for the entire Manga
+//	        createZipFile(mangaFolder.getPath(), "Manga.zip");
+	    }
+
+
+	 private void downloadImage(String imageUrl, File destinationFile) {
+	        client.get()
+	                .uri(imageUrl)
+	                .retrieve()
+	                .bodyToMono(byte[].class)
+	                .doOnTerminate(() -> System.out.println("Downloaded image: " + imageUrl))
+	                .subscribe(imageBytes -> {
+	                    try (FileOutputStream outputStream = new FileOutputStream(destinationFile)) {
+	                        outputStream.write(imageBytes);
+	                    } catch (IOException e) {
+	                        e.printStackTrace();
+	                    }
+	                });
+	    }
+	 
+	    private void createZipFile(String folderPath, String zipFileName) {
+	        try {
+	            Path sourceFolderPath = new File(folderPath).toPath();
+	            try (ZipOutputStream zipOutputStream = new ZipOutputStream(Files.newOutputStream(Path.of(zipFileName)))) {
+	                Files.walk(sourceFolderPath).filter(path -> !Files.isDirectory(path)).forEach(path -> {
+	                    ZipEntry zipEntry = new ZipEntry(sourceFolderPath.relativize(path).toString());
+	                    try {
+	                        zipOutputStream.putNextEntry(zipEntry);
+	                        Files.copy(path, zipOutputStream);
+	                        zipOutputStream.closeEntry();
+	                    } catch (IOException e) {
+	                        e.printStackTrace();
+	                    }
+	                });
+	            }
+	        } catch (IOException e) {
+	            e.printStackTrace();
+	        }
+	    }
 
 }

@@ -3,6 +3,8 @@ package com.manga.harbour.mh.controller;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -35,10 +37,21 @@ public class MangaHarbourContoller {
 		return mangaVolumeBuiler.getMangaDetails(title);
 	}
 
-	@GetMapping("/manga/download/{id}")
-	public List<MangaVolumeDTO> getManga(@PathVariable String id) {
-		return mangaVolumeBuiler.getMangaVolumesById(id, null, null);
-	}
+//	@GetMapping("/manga/download/{id}")
+//	public List<MangaVolumeDTO> getManga(@PathVariable String id) {
+//		return mangaVolumeBuiler.getMangaVolumesById(id, null, null);
+//	}
+	
+	 @GetMapping("/manga/download/{id}")
+	    public ResponseEntity<String> downloadManga(@PathVariable String id) {
+	        try {
+	        	mangaVolumeBuiler.downloadAndOrganizeImages(id, null, null);
+	            return ResponseEntity.ok("Manga downloaded successfully.");
+	        } catch (Exception e) {
+	            e.printStackTrace();
+	            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to download manga.");
+	        }
+	    }
 
 	@GetMapping("/manga/{mangaId}/{volume}/{chapter}")
 	public List<MangaVolumeDTO>  getVolumeAndChapterDetails(@PathVariable("mangaId") String mangaId, @PathVariable("volume") String volume, @PathVariable("chapter") String chapter) {
