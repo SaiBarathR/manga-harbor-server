@@ -37,21 +37,10 @@ public class MangaHarbourContoller {
 		return mangaVolumeBuiler.getMangaDetails(title);
 	}
 
-//	@GetMapping("/manga/download/{id}")
-//	public List<MangaVolumeDTO> getManga(@PathVariable String id) {
-//		return mangaVolumeBuiler.getMangaVolumesById(id, null, null);
-//	}
-	
-	 @GetMapping("/manga/download/{id}")
-	    public ResponseEntity<String> downloadManga(@PathVariable String id) {
-	        try {
-	        	mangaVolumeBuiler.downloadAndOrganizeImages(id, null, null);
-	            return ResponseEntity.ok("Manga downloaded successfully.");
-	        } catch (Exception e) {
-	            e.printStackTrace();
-	            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to download manga.");
-	        }
-	    }
+	@GetMapping("/manga/download/{id}")
+	public List<MangaVolumeDTO> getManga(@PathVariable String id) {
+		return mangaVolumeBuiler.getMangaVolumesById(id, null, null);
+	}
 
 	@GetMapping("/manga/{mangaId}/{volume}/{chapter}")
 	public List<MangaVolumeDTO>  getVolumeAndChapterDetails(@PathVariable("mangaId") String mangaId, @PathVariable("volume") String volume, @PathVariable("chapter") String chapter) {
