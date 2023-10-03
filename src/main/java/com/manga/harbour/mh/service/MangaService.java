@@ -125,7 +125,7 @@ public class MangaService {
 			});
 		});
 	}
-	
+
 	public byte[] createMangaZipFile() {
 		try (ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
 				ZipOutputStream zipOutputStream = new ZipOutputStream(byteArrayOutputStream)) {
@@ -289,7 +289,7 @@ public class MangaService {
 				createZipFile(volumeFolder.getPath(), volumeZipPath);
 				volumeZipPaths.add(volumeZipPath);
 			}
-			createMangaZipFile(mangaFolder);	
+			//			createMangaZipFile(mangaFolder);	
 			mangaFolder.delete();
 			return mangaVolumes;
 		} catch (IOException e) {
@@ -348,38 +348,38 @@ public class MangaService {
 	//	        e.printStackTrace();
 	//	    }
 	//	}
-	
-	private ZipOutputStream createMangaZipFile(File mangaFolder) {
-		try {
-			try (ZipOutputStream zipOutputStream = new ZipOutputStream(new FileOutputStream("manga.zip"))) {
-				for (String volumeZipPath : volumeZipPaths) {
-					File volumeZipFile = new File(volumeZipPath);
-					if (volumeZipFile.exists()) {
-						try (FileInputStream fis = new FileInputStream(volumeZipFile)) {
-							ZipEntry zipEntry = new ZipEntry(volumeZipFile.getName());  // Use only the file name, not the path
-							zipOutputStream.putNextEntry(zipEntry);
 
-							byte[] buffer = new byte[1024];
-							int length;
-							while ((length = fis.read(buffer)) > 0) {
-								zipOutputStream.write(buffer, 0, length);
-							}
-
-							zipOutputStream.closeEntry();
-						} catch (IOException e) {
-							e.printStackTrace();
-						}
-					} else {
-						System.out.println("Volume zip file not found: " + volumeZipPath);
-					}
-				}
-				return zipOutputStream;
-			}
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		return null;
-	}
+	//	private ZipOutputStream createMangaZipFile(File mangaFolder) {
+	//		try {
+	//			try (ZipOutputStream zipOutputStream = new ZipOutputStream(new FileOutputStream("manga.zip"))) {
+	//				for (String volumeZipPath : volumeZipPaths) {
+	//					File volumeZipFile = new File(volumeZipPath);
+	//					if (volumeZipFile.exists()) {
+	//						try (FileInputStream fis = new FileInputStream(volumeZipFile)) {
+	//							ZipEntry zipEntry = new ZipEntry(volumeZipFile.getName());  // Use only the file name, not the path
+	//							zipOutputStream.putNextEntry(zipEntry);
+	//
+	//							byte[] buffer = new byte[1024];
+	//							int length;
+	//							while ((length = fis.read(buffer)) > 0) {
+	//								zipOutputStream.write(buffer, 0, length);
+	//							}
+	//
+	//							zipOutputStream.closeEntry();
+	//						} catch (IOException e) {
+	//							e.printStackTrace();
+	//						}
+	//					} else {
+	//						System.out.println("Volume zip file not found: " + volumeZipPath);
+	//					}
+	//				}
+	//				return zipOutputStream;
+	//			}
+	//		} catch (IOException e) {
+	//			e.printStackTrace();
+	//		}
+	//		return null;
+	//	}
 
 	public List<String> getImageUrlsForChapter(String chapterId) {
 		List<String> imageUrls = new ArrayList<>();

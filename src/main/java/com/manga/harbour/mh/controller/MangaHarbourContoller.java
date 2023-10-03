@@ -42,22 +42,17 @@ public class MangaHarbourContoller {
 		return mangaVolumeBuiler.getMangaDetails(title);
 	}
 
-//	@GetMapping("/manga/download/{mangaId}")
-//	public List<MangaVolumeDTO> getManga(@PathVariable String mangaId) {
-//		return mangaVolumeBuiler.getMangaVolumesById(mangaId, null, null);
-//	}
-	
-	 @GetMapping("/manga/download/{mangaId}")
-	    public ResponseEntity<byte[]> getManga(@PathVariable String mangaId) {
-	        List<MangaVolumeDTO> mangaVolumes = mangaVolumeBuiler.getMangaVolumesById(mangaId, null, null);
-	        byte[] mangaZipFile = mangaVolumeBuiler.createMangaZipFile();
-	        
-	        HttpHeaders headers = new HttpHeaders();
-	        headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
-	        headers.setContentDispositionFormData("attachment", "manga.zip");
-	        
-	        return new ResponseEntity<>(mangaZipFile, headers, HttpStatus.OK);
-	    }
+	@GetMapping("/manga/download/{mangaId}")
+	public ResponseEntity<byte[]> getManga(@PathVariable String mangaId) {
+		List<MangaVolumeDTO> mangaVolumes = mangaVolumeBuiler.getMangaVolumesById(mangaId, null, null);
+		byte[] mangaZipFile = mangaVolumeBuiler.createMangaZipFile();
+
+		HttpHeaders headers = new HttpHeaders();
+		headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+		headers.setContentDispositionFormData("attachment", "manga.zip");
+
+		return new ResponseEntity<>(mangaZipFile, headers, HttpStatus.OK);
+	}
 
 	@GetMapping("/manga/download/{mangaId}/{volume}/{chapter}")
 	public List<MangaVolumeDTO>  getVolumeAndChapterDetails(@PathVariable("mangaId") String mangaId, @PathVariable("volume") String volume, @PathVariable("chapter") String chapter) {
