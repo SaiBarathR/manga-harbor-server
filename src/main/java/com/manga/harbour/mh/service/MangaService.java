@@ -47,7 +47,6 @@ public class MangaService {
 	private MangaCoverService ImageService;
 
 	public MangaService(WebClient.Builder webClientBuilder) {
-		//		this.client = webClientBuilder.build();
 		this.client = webClientBuilder.baseUrl("https://api.mangadex.org")
 				.codecs(codecs -> codecs
 						.defaultCodecs()
@@ -72,7 +71,7 @@ public class MangaService {
 				.queryParam("limit", 4)
 				.queryParam("title", title)
 				.queryParam("includes[]", "cover_art")
-				.queryParam("contentRating[]", "safe", "suggestive", "erotica", "pornographic");
+				.queryParam("contentRating[]", "safe", "suggestive");
 
 		Mono<String> mangaResponse = client.get()
 				.uri(builder.build().toUriString())
@@ -80,6 +79,26 @@ public class MangaService {
 				.bodyToMono(String.class)
 				.onErrorResume(throwable -> Mono.empty());
 
+		return contructMangaData(mangaResponse);
+	}
+
+	public Mono<Object> getMangaInfoById(String id) {
+		try {
+			UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl("https://api.mangadex.org/manga/"+id)
+					.queryParam("includes[]", "manga","cover_art","author","artist","tag","creator");
+			Mono<String> mangaResponse = client.get()
+					.uri(builder.build().toUriString())
+					.retrieve()
+					.bodyToMono(String.class);
+			System.out.println("Retrived manga details from mangadex for Id: " + id);
+			return contructMangaData(mangaResponse);
+		}catch(Exception e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+
+	private Mono<Object> contructMangaData(Mono<String> mangaResponse) {
 		return mangaResponse.flatMap(mangaData -> {
 			MultiValueMap<String, String> queryParams = new LinkedMultiValueMap<>();
 			extractMangaIdsFromResponse(mangaData).forEach(id -> queryParams.add("manga[]", id));
@@ -124,6 +143,7 @@ public class MangaService {
 				return null;
 			});
 		});
+
 	}
 
 	public byte[] createMangaZipFile() {
