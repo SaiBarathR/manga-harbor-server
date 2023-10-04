@@ -31,17 +31,22 @@ public class MangaHarbourContoller {
 	public String checkApi() {
 		return "Api is connected";
 	}
-
+	
 	@GetMapping("/manga/{id}")
-	public List<MangaVolumeDTO> getMangaChapterList(@PathVariable String id) {
-		return mangaVolumeBuiler.getMangaChapterListById(id);
+	public Mono<Object> getMangaDetails(@PathVariable String id) {
+		return mangaVolumeBuiler.getMangaInfoById(id);
 	}
-
+	
 	@GetMapping("/manga/search/{title}")
 	public Mono<Object>searchMangaDetails(@PathVariable String title) {
 		return mangaVolumeBuiler.getMangaDetails(title);
 	}
 
+	@GetMapping("/manga/volumeList/{id}")
+	public List<MangaVolumeDTO> getMangaChapterList(@PathVariable String id) {
+		return mangaVolumeBuiler.getMangaChapterListById(id);
+	}
+	
 	@GetMapping("/manga/download/{mangaId}")
 	public ResponseEntity<byte[]> getManga(@PathVariable String mangaId) {
 		List<MangaVolumeDTO> mangaVolumes = mangaVolumeBuiler.getMangaVolumesById(mangaId, null, null);
