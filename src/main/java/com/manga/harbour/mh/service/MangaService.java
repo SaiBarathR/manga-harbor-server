@@ -221,8 +221,6 @@ public class MangaService {
             Map<String, Map<String, Object>> volumesMap = (Map<String, Map<String, Object>>) jsonMap.get("volumes");
 
             List<MangaVolumeDTO> mangaVolumes = new ArrayList<>();
-//            File mangaFolder = new File("Manga");
-//            mangaFolder.mkdirs();
             for (Map.Entry<String, Map<String, Object>> volumeEntry : volumesMap.entrySet()) {
                 String volumeNumber = volumeEntry.getKey();
 
@@ -236,42 +234,31 @@ public class MangaService {
 
                 MangaVolumeDTO mangaVolume = new MangaVolumeDTO();
                 mangaVolume.setVolume(volumeNumber);
-//                File volumeFolder = new File(mangaFolder, "Volume " + volumeNumber);
-//                volumeFolder.mkdirs();
                 Map<String, Object> chaptersMap = (Map<String, Object>) volumeEntry.getValue().get("chapters");
 
                 List<Chapter> chapters = new ArrayList<>();
-//                int imageIndex = 0;
                 for (Map.Entry<String, Object> chapterEntry : chaptersMap.entrySet()) {
                     String chapterNumber = chapterEntry.getKey();
                     if (selectedChapter != null && !selectedChapter.equals(chapterNumber)) {
                         continue;
                     }
-
                     Map<String, Object> chapterData = (Map<String, Object>) chapterEntry.getValue();
                     Chapter chapterDTO = new Chapter();
                     chapterDTO.setId((String) chapterData.get("id"));
-                    //					chapterDTO.setOthers((List<String>) chapterData.get("others"));
                     chapterDTO.setChapter(chapterNumber);
-                    //					File chapterFolder = new File(volumeFolder, "Chapter " + chapterNumber);
-                    //					chapterFolder.mkdirs();
                     List<String> imageUrls = getImageUrlsForChapter((String) chapterData.get("id"));
                     if (imageUrls.isEmpty()) {
-                        String otherUrl = ((List<String>) chapterData.get("others")).get(0);
-                        imageUrls = getImageUrlsForChapter(otherUrl);
+                        for (String otherImageUrl : ((List<String>) chapterData.get("others"))) {
+                            if(imageUrls.isEmpty()) {
+                                imageUrls = getImageUrlsForChapter(otherImageUrl);
+                            }
+                        }
                     }
                     List<Image> images = new ArrayList<>();
                     for (String imageUrl : imageUrls) {
                         Image image = new Image();
                         image.setUrl(imageUrl);
                         images.add(image);
-//                        String imageName = "Image" + (++imageIndex) + ".png";
-//                        byte[] imageBytes = ImageService.retrieveImageData(imageUrl).block();
-//                        try (FileOutputStream outputStream = new FileOutputStream(new File(volumeFolder, imageName))) {
-//                            outputStream.write(imageBytes);
-//                        } catch (IOException e) {
-//                            e.printStackTrace();
-//                        }
                     }
                     System.out.println("Fetched Chapter: " + chapterNumber);
                     chapterDTO.setImages(images);
@@ -282,15 +269,9 @@ public class MangaService {
                     continue;
                 }
                 System.out.println("Fetched volume: " + volumeNumber);
-                //				createZipFile(mangaFolder.getPath(),("Volume "+volumeNumber+".zip"));
                 mangaVolume.setChapters(chapters);
                 mangaVolumes.add(mangaVolume);
-//                String volumeZipPath = mangaFolder.getPath() + File.separator + "Volume " + volumeNumber + ".zip";
-//                createZipFile(volumeFolder.getPath(), volumeZipPath);
-//                volumeZipPaths.add(volumeZipPath);
             }
-            //			createMangaZipFile(mangaFolder);
-//            mangaFolder.delete();
             return mangaVolumes;
         } catch (IOException e) {
             e.printStackTrace();
@@ -307,7 +288,6 @@ public class MangaService {
             File volumeFolder = new File(mangaFolder, "Volume " + volumeNumber);
             volumeFolder.mkdirs();
             List<Chapter> chapters = mangaVolume.getChapters();
-            int imageIndex = 0;
             if (chapters.isEmpty()) {
                 continue;
             }
@@ -315,10 +295,13 @@ public class MangaService {
                 String chapterNumber = chapter.getChapter();
                 List<Image> images = chapter.getImages();
                 if (!images.isEmpty()) {
+                    int imageIndex = 0;
+                    File chapterFolder = new File(volumeFolder, "Chapter " + chapterNumber);
+                    chapterFolder.mkdirs();
                     for (Image image : images) {
                         String imageName = "Image" + (++imageIndex) + ".png";
                         byte[] imageBytes = ImageService.retrieveImageData(image.getUrl()).block();
-                        try (FileOutputStream outputStream = new FileOutputStream(new File(volumeFolder, imageName))) {
+                        try (FileOutputStream outputStream = new FileOutputStream(new File(chapterFolder, imageName))) {
                             outputStream.write(imageBytes);
                         } catch (IOException e) {
                             e.printStackTrace();
