@@ -9,6 +9,7 @@ Manga Harbour is a Spring Boot application that provides a manga downloading ser
 - [Getting Started](#getting-started)
 - [API Endpoints](#api-endpoints)
 - [Usage](#usage)
+- [Integration with Manga Harbor Client](#integration-with-manga-harbor-client)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -33,10 +34,10 @@ Manga Harbour is a Spring Boot application that provides a manga downloading ser
 
    ```bash
    git clone https://github.com/SaiBarathR/manga-harbor-server.git
-   cd manga-harbour
+   cd manga-harbor-server
    ```
 
-3. **Build and Run the Application:**
+2. **Build and Run the Application:**
 
    ```bash
    mvn spring-boot:run
@@ -100,6 +101,52 @@ Manga Harbour is a Spring Boot application that provides a manga downloading ser
 
    Download manga volumes or chapters as ZIP files.
 
+## Integration with Manga Harbor Client
+
+Manga Harbour Server seamlessly integrates with the Manga Harbor Client, providing the backend service for manga downloading functionality. To run the complete Manga Harbor application, follow these steps:
+
+1. **Clone the Manga Harbor Client repository:**
+
+   ```bash
+   git clone https://github.com/SaiBarathR/manga-harbor.git
+   cd manga-harbor
+   ```
+
+2. **Set Up the Manga Harbor React Client (Refer to [manga-harbor  README](https://github.com/SaiBarathR/manga-harbor#steps-to-run-the-react-app-with-manga-harbor-spring-server) for instructions).**
+
+3. **Configure API Endpoint in Manga Harbor Client (if necessary):**
+
+   If the Manga Harbor Server is running on a different port or host, update the API endpoint in the Manga Harbor Client. Open the `src/config/app.json` file and modify the `baseUrl` accordingly:
+
+   ```json
+   {
+     "urls": {
+       "manga": "manga/",
+       "tags": "manga/tag",
+       "grpMangaStats": "statistics/manga",
+       "search": "manga/search/",
+       "cover": "manga/cover?url=",
+       "download": "manga/download/",
+       "volumes": "manga/volumeList/"
+     },
+     "baseUrl": {
+       "springBoot": "http://localhost:9000/",
+       "mangaDex": "https://api.mangadex.org/"
+     }
+   }
+   ```
+
+   Replace `"http://localhost:9000/"` with the appropriate base URL of your Manga Harbor Spring server.
+
+4. **Run the Manga Harbor Client:**
+
+   ```bash
+   npm install
+   npm start
+   ```
+
+   The Manga Harbor Client will be accessible at `http://localhost:3000/`.
+
 ## Contributing
 
 Contributions are welcome! If you have any feature requests, bug reports, or suggestions, please open an issue on GitHub. Pull requests are also encouraged.
@@ -111,3 +158,6 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ---
 
 Feel free to customize this README further to include additional sections like deployment instructions, troubleshooting, or specific API documentation if needed. Good luck with your project!
+```
+
+This README now includes a section on how to integrate the `manga-harbor-server` with the `manga-harbor` client and provides instructions for running both applications together. Feel free to customize it further if needed!
