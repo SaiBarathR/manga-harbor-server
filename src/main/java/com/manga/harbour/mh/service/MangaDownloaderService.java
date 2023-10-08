@@ -3,6 +3,8 @@ package com.manga.harbour.mh.service;
 import com.manga.harbour.mh.entity.Chapter;
 import com.manga.harbour.mh.entity.Image;
 import com.manga.harbour.mh.entity.MangaVolume;
+import jakarta.servlet.ServletOutputStream;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -27,7 +29,7 @@ public class MangaDownloaderService {
     @Autowired
     private MangaImageService ImageService;
 
-    public ResponseEntity<byte[]> createFolders(List<MangaVolume> mangaVolumes, String method) {
+    public void generateMangaAsZip(List<MangaVolume> mangaVolumes, String method, HttpServletResponse response) {
         boolean zipByChapter = method.equals("byChapter");
         File mangaFolder = new File("Manga");
         mangaFolder.mkdirs();
@@ -60,52 +62,61 @@ public class MangaDownloaderService {
                     }
                     System.out.println("Saved " + chapterName);
                     if (zipByChapter) {
-                        String chapterZipPath = mangaFolder.getPath() + File.separator + "Chapter " + chapterNumber + ".zip";
-                        System.out.println("Creating Zip for: " + chapterName);
-                        createZipFile(chapterFolder.getPath(), chapterZipPath);
-                        zipPaths.add(chapterZipPath);
-                        System.out.println("Saved Zip: " + chapterName);
-                        deleteFolderByPath(chapterFolder.toPath(), chapterName);
+                        generateZipFiles(mangaFolder.getPath(), chapterFolder.getPath(), chapterFolder.toPath(), chapterName);
                         break;
                     }
                 }
             }
             if (!zipByChapter) {
                 System.out.println("Saved " + volumeName);
-                String volumeZipPath = mangaFolder.getPath() + File.separator + "Volume " + volumeNumber + ".zip";
-                System.out.println("Creating Zip for: " + volumeName);
-                createZipFile(volumeFolder.getPath(), volumeZipPath);
-                zipPaths.add(volumeZipPath);
-                System.out.println("Saved " + volumeName);
-                deleteFolderByPath(volumeFolder.toPath(), volumeName);
+                generateZipFiles(mangaFolder.getPath(), volumeFolder.getPath(), volumeFolder.toPath(), volumeName);
             }
         }
         if (!mangaVolumes.isEmpty()) {
-            byte[] mangaZipFile = createMangaZipFile();
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
-            headers.setContentDispositionFormData("attachment", "manga.zip");
-            deleteFolderByPath(mangaFolder.toPath(), mangaFolder.getName());
-            zipPaths.clear();
-            return new ResponseEntity<>(mangaZipFile, headers, HttpStatus.OK);
+            streamZipData(mangaVolumes, method, mangaFolder.toPath(), mangaFolder.getName(), response);
         }
-        return null;
     }
 
-    private void deleteFolderByPath(Path path, String folderName) {
-        try {
-            Path rootPaths = path;
-            Files.walk(rootPaths)
-                    .sorted(Comparator.reverseOrder())
-                    .map(Path::toFile)
-                    .forEach(File::delete);
-            System.out.println("Deleted " + folderName + " folder");
+    public void streamZipData(List<MangaVolume> mangaVolumes, String method, Path path, String folderName, HttpServletResponse response) {
+        response.setContentType("application/zip");
+        response.setHeader("Content-Disposition", "attachment; filename=manga.zip");
+        try (ServletOutputStream outputStream = response.getOutputStream()) {
+            createZipStream(mangaVolumes, method, outputStream);
         } catch (IOException e) {
-            System.out.println(e);
+            e.printStackTrace();
+        } finally {
+            deleteFolderByPath(path, folderName);
+            zipPaths.clear();
         }
     }
 
-    private void createZipFile(String folderPath, String zipFileName) {
+    private void createZipStream(List<MangaVolume> mangaVolumes, String method, OutputStream outputStream) {
+        try (ZipOutputStream zipOutputStream = new ZipOutputStream(outputStream)) {
+            for (String zipPath : zipPaths) {
+                File zipFile = new File(zipPath);
+                if (zipFile.exists()) {
+                    try (FileInputStream fis = new FileInputStream(zipFile)) {
+                        ZipEntry zipEntry = new ZipEntry(zipFile.getName());
+                        zipOutputStream.putNextEntry(zipEntry);
+                        byte[] buffer = new byte[1024];
+                        int length;
+                        while ((length = fis.read(buffer)) > 0) {
+                            zipOutputStream.write(buffer, 0, length);
+                        }
+                        zipOutputStream.closeEntry();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                } else {
+                    System.out.println("zip file not found: " + zipPath);
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void writeFilesInToZipFile(String folderPath, String zipFileName) {
         try {
             Path sourceFolderPath = new File(folderPath).toPath();
             try (ZipOutputStream zipOutputStream = new ZipOutputStream(Files.newOutputStream(Path.of(zipFileName)))) {
@@ -125,33 +136,26 @@ public class MangaDownloaderService {
         }
     }
 
-    public byte[] createMangaZipFile() {
-        try (ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream(); ZipOutputStream zipOutputStream = new ZipOutputStream(byteArrayOutputStream)) {
-            for (String zipPath : zipPaths) {
-                File volumeZipFile = new File(zipPath);
-                if (volumeZipFile.exists()) {
-                    try (FileInputStream fis = new FileInputStream(volumeZipFile)) {
-                        ZipEntry zipEntry = new ZipEntry(volumeZipFile.getName());
-                        zipOutputStream.putNextEntry(zipEntry);
-                        byte[] buffer = new byte[1024];
-                        int length;
-                        while ((length = fis.read(buffer)) > 0) {
-                            zipOutputStream.write(buffer, 0, length);
-                        }
-                        zipOutputStream.closeEntry();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                } else {
-                    System.out.println("zip file not found: " + zipPath);
-                }
-            }
-            zipOutputStream.finish();
-            return byteArrayOutputStream.toByteArray();
+    private void generateZipFiles(String parentPath, String childPath, Path path, String fileName) {
+        String zipPath = parentPath + File.separator + fileName + ".zip";
+        System.out.println("Creating Zip for: " + fileName);
+        writeFilesInToZipFile(childPath, zipPath);
+        zipPaths.add(zipPath);
+        System.out.println("Saved Zip: " + fileName);
+        deleteFolderByPath(path, fileName);
+    }
+
+    private void deleteFolderByPath(Path path, String folderName) {
+        try {
+            Path rootPaths = path;
+            Files.walk(rootPaths)
+                    .sorted(Comparator.reverseOrder())
+                    .map(Path::toFile)
+                    .forEach(File::delete);
+            System.out.println("Deleted " + folderName + " folder");
         } catch (IOException e) {
-            e.printStackTrace();
+            System.out.println(e);
         }
-        return null;
     }
 
 }
