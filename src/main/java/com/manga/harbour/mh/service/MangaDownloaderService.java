@@ -20,7 +20,7 @@ public class MangaDownloaderService {
     private final List<String> volumeZipPaths = new ArrayList<>();
 
     @Autowired
-    private MangaCoverService ImageService;
+    private MangaImageService ImageService;
 
     public byte[] createMangaZipFile() {
         try (ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream(); ZipOutputStream zipOutputStream = new ZipOutputStream(byteArrayOutputStream)) {

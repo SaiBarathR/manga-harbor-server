@@ -34,7 +34,7 @@ public class MangaService {
     private final ScheduledExecutorService executorService;
 
     @Autowired
-    private MangaCoverService ImageService;
+    private MangaImageService ImageService;
 
     public MangaService(WebClient.Builder webClientBuilder) {
         this.client = webClientBuilder

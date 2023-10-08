@@ -11,11 +11,11 @@ import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 
 @Service
-public class MangaCoverService {
+public class MangaImageService {
 
 	private final WebClient client;
 
-	public MangaCoverService(WebClient.Builder webClientBuilder) {
+	public MangaImageService(WebClient.Builder webClientBuilder) {
 		this.client = webClientBuilder
 				.codecs(codecs -> codecs
 						.defaultCodecs()
