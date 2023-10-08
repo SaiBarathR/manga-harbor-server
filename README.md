@@ -32,7 +32,7 @@ Manga Harbour is a Spring Boot application that provides a manga downloading ser
 1. **Clone the repository:**
 
    ```bash
-   git clone https://github.com/SaiBarathR/manga-harbor.git
+   git clone https://github.com/SaiBarathR/manga-harbor-server.git
    cd manga-harbour
    ```
 
