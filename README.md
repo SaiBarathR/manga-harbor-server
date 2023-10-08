@@ -25,7 +25,7 @@ Manga Harbour is a Spring Boot application that provides a manga downloading ser
 - Java Development Kit (JDK) 8 or higher
 - Apache Maven
 - Git
-- MangaDex API Credentials (Get your API credentials from [MangaDex](https://api.mangadex.org/docs.html))
+- MangaDex API Credentials (Get your API credentials from [MangaDex](https://api.mangadex.org/docs))
 
 ## Getting Started
 
@@ -106,7 +106,7 @@ Contributions are welcome! If you have any feature requests, bug reports, or sug
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the LICENSE file for details.
 
 ---
 
