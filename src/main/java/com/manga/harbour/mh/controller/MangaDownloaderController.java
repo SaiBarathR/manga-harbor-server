@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@CrossOrigin(origins="*")
+@CrossOrigin(origins = "*")
 @RequestMapping("/manga/download")
 public class MangaDownloaderController {
     @Autowired
@@ -24,22 +24,18 @@ public class MangaDownloaderController {
     @GetMapping("/{mangaId}")
     public ResponseEntity<byte[]> getManga(@PathVariable String mangaId) {
         List<MangaVolume> mangaVolumes = mangaService.getMangaVolumesById(mangaId, null, null);
-        return mangaDownloaderService.createFolders(mangaVolumes);
+        return mangaDownloaderService.createFolders(mangaVolumes, "byVolume");
     }
 
-    @GetMapping("/{mangaId}/volume/{volume}")
-    public ResponseEntity<byte[]> getVolumeDetails(@PathVariable("mangaId") String mangaId, @PathVariable("volume") String volume) {
+    @GetMapping("{mangaId}/{volume}")
+    public ResponseEntity<byte[]> downloadVolume(@PathVariable("mangaId") String mangaId, @PathVariable("volume") String volume) {
         List<MangaVolume> mangaVolumes = mangaService.getMangaVolumesById(mangaId, volume, null);
-        return mangaDownloaderService.createFolders(mangaVolumes);
-    }
-
-    @GetMapping("/{mangaId}/chapter/{chapter}")
-    public List<MangaVolume> getChapterDetails(@PathVariable("mangaId") String mangaId, @PathVariable("chapter") String chapter) {
-        return mangaService.getMangaVolumesById(mangaId, null, chapter);
+        return mangaDownloaderService.createFolders(mangaVolumes, "byVolume");
     }
 
     @GetMapping("{mangaId}/{volume}/{chapter}")
-    public List<MangaVolume> getVolumeAndChapterDetails(@PathVariable("mangaId") String mangaId, @PathVariable("volume") String volume, @PathVariable("chapter") String chapter) {
-        return mangaService.getMangaVolumesById(mangaId, volume, chapter);
+    public ResponseEntity<byte[]> downloadChapter(@PathVariable("mangaId") String mangaId, @PathVariable("volume") String volume, @PathVariable("chapter") String chapter) {
+        List<MangaVolume> mangaVolumes = mangaService.getMangaVolumesById(mangaId, volume, chapter);
+        return mangaDownloaderService.createFolders(mangaVolumes, "byChapter");
     }
 }
