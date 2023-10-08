@@ -24,38 +24,22 @@ public class MangaDownloaderController {
     @GetMapping("/{mangaId}")
     public ResponseEntity<byte[]> getManga(@PathVariable String mangaId) {
         List<MangaVolume> mangaVolumes = mangaService.getMangaVolumesById(mangaId, null, null);
-        if (!mangaVolumes.isEmpty()) {
-            mangaDownloaderService.createFolders(mangaVolumes);
-            byte[] mangaZipFile = mangaDownloaderService.createMangaZipFile();
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
-            headers.setContentDispositionFormData("attachment", "manga.zip");
-            return new ResponseEntity<>(mangaZipFile, headers, HttpStatus.OK);
-        }
-        return null;
-    }
-
-    @GetMapping("{mangaId}/{volume}/{chapter}")
-    public List<MangaVolume> getVolumeAndChapterDetails(@PathVariable("mangaId") String mangaId, @PathVariable("volume") String volume, @PathVariable("chapter") String chapter) {
-        return mangaService.getMangaVolumesById(mangaId, volume, chapter);
+        return mangaDownloaderService.createFolders(mangaVolumes);
     }
 
     @GetMapping("/{mangaId}/volume/{volume}")
     public ResponseEntity<byte[]> getVolumeDetails(@PathVariable("mangaId") String mangaId, @PathVariable("volume") String volume) {
         List<MangaVolume> mangaVolumes = mangaService.getMangaVolumesById(mangaId, volume, null);
-        if (!mangaVolumes.isEmpty()) {
-            mangaDownloaderService.createFolders(mangaVolumes);
-            byte[] mangaZipFile = mangaDownloaderService.createMangaZipFile();
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
-            headers.setContentDispositionFormData("attachment", "manga.zip");
-            return new ResponseEntity<>(mangaZipFile, headers, HttpStatus.OK);
-        }
-        return null;
+        return mangaDownloaderService.createFolders(mangaVolumes);
     }
 
     @GetMapping("/{mangaId}/chapter/{chapter}")
     public List<MangaVolume> getChapterDetails(@PathVariable("mangaId") String mangaId, @PathVariable("chapter") String chapter) {
         return mangaService.getMangaVolumesById(mangaId, null, chapter);
+    }
+
+    @GetMapping("{mangaId}/{volume}/{chapter}")
+    public List<MangaVolume> getVolumeAndChapterDetails(@PathVariable("mangaId") String mangaId, @PathVariable("volume") String volume, @PathVariable("chapter") String chapter) {
+        return mangaService.getMangaVolumesById(mangaId, volume, chapter);
     }
 }
