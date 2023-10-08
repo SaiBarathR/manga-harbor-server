@@ -55,6 +55,39 @@ public class MangaService {
         return parseAndTransformMangaData(mangaData, selectedVolume, selectedChapter);
     }
 
+    public String getMangaName(String mangaId) {
+        Mono<String> responseMono = client.get().uri("/manga/" + mangaId).retrieve().bodyToMono(String.class);
+        String responseJson = responseMono.block();
+        if (responseJson != null) {
+            ObjectMapper objectMapper = new ObjectMapper();
+            try {
+                JsonNode rootNode = objectMapper.readTree(responseJson);
+                JsonNode dataNode = rootNode.get("data");
+                if (dataNode != null) {
+                    JsonNode attributesNode = dataNode.get("attributes");
+                    if (attributesNode != null) {
+                        JsonNode titleNode = attributesNode.get("title");
+                        if (titleNode != null && titleNode.has("en")) {
+                            return titleNode.get("en").asText();
+                        } else {
+                            JsonNode altTitlesNode = attributesNode.get("altTitles");
+                            if (altTitlesNode != null) {
+                                for (JsonNode altTitle : altTitlesNode) {
+                                    if (altTitle.has("en")) {
+                                        return altTitle.get("en").asText();
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        return "";
+    }
+
     public Mono<Object> getMangaDetails(String title) {
         UriComponentsBuilder builder = UriComponentsBuilder
                 .fromHttpUrl("https://api.mangadex.org")
@@ -69,7 +102,9 @@ public class MangaService {
 
     public Mono<Object> getMangaInfoById(String id) {
         try {
-            UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl("https://api.mangadex.org/manga/" + id).queryParam("includes[]", "manga", "cover_art", "author", "artist", "tag", "creator");
+            UriComponentsBuilder builder = UriComponentsBuilder
+                    .fromHttpUrl("https://api.mangadex.org/manga/" + id)
+                    .queryParam("includes[]", "manga", "cover_art", "author", "artist", "tag", "creator");
             Mono<String> mangaResponse = client.get().uri(builder.build().toUriString()).retrieve().bodyToMono(String.class);
             System.out.println("Fetched manga details from mangadex for Id: " + id);
             return constructMangaData(mangaResponse);
