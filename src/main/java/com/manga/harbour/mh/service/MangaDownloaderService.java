@@ -33,7 +33,8 @@ public class MangaDownloaderService {
         mangaFolder.mkdirs();
         for (MangaVolume mangaVolume : mangaVolumes) {
             String volumeNumber = mangaVolume.getVolume();
-            File volumeFolder = new File(mangaFolder, "Volume " + volumeNumber);
+            String volumeName = "Volume " + volumeNumber;
+            File volumeFolder = new File(mangaFolder, volumeName);
             volumeFolder.mkdirs();
             List<Chapter> chapters = mangaVolume.getChapters();
             if (chapters.isEmpty()) {
@@ -42,10 +43,11 @@ public class MangaDownloaderService {
             int imageIndex = 0;
             for (Chapter chapter : chapters) {
                 String chapterNumber = chapter.getChapter();
+                String chapterName = "Chapter " + chapterNumber;
                 List<Image> images = chapter.getImages();
                 if (!images.isEmpty()) {
                     imageIndex = zipByChapter ? 0 : imageIndex;
-                    File chapterFolder = new File(zipByChapter ? mangaFolder : volumeFolder, "Chapter " + chapterNumber);
+                    File chapterFolder = new File(zipByChapter ? mangaFolder : volumeFolder, chapterName);
                     chapterFolder.mkdirs();
                     for (Image image : images) {
                         String imageName = "Image" + (++imageIndex) + ".png";
@@ -56,24 +58,26 @@ public class MangaDownloaderService {
                             e.printStackTrace();
                         }
                     }
-                    System.out.println("Saved Chapter: " + chapterNumber);
-                    if(zipByChapter){
+                    System.out.println("Saved " + chapterName);
+                    if (zipByChapter) {
                         String chapterZipPath = mangaFolder.getPath() + File.separator + "Chapter " + chapterNumber + ".zip";
-                        System.out.println("Creating Zip for chapter: " + chapterNumber);
+                        System.out.println("Creating Zip for: " + chapterName);
                         createZipFile(chapterFolder.getPath(), chapterZipPath);
                         zipPaths.add(chapterZipPath);
-                        System.out.println("Saved Chapter Zip: " + chapterNumber);
+                        System.out.println("Saved Zip: " + chapterName);
+                        deleteFolderByPath(chapterFolder.toPath(), chapterName);
                         break;
                     }
                 }
             }
-            if(!zipByChapter) {
-                System.out.println("Saved volume: " + volumeNumber);
+            if (!zipByChapter) {
+                System.out.println("Saved " + volumeName);
                 String volumeZipPath = mangaFolder.getPath() + File.separator + "Volume " + volumeNumber + ".zip";
-                System.out.println("Creating Zip: " + volumeNumber);
+                System.out.println("Creating Zip for: " + volumeName);
                 createZipFile(volumeFolder.getPath(), volumeZipPath);
                 zipPaths.add(volumeZipPath);
-                System.out.println("Saved Zip: " + volumeNumber);
+                System.out.println("Saved " + volumeName);
+                deleteFolderByPath(volumeFolder.toPath(), volumeName);
             }
         }
         if (!mangaVolumes.isEmpty()) {
@@ -81,21 +85,21 @@ public class MangaDownloaderService {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
             headers.setContentDispositionFormData("attachment", "manga.zip");
-            deleteFolderByPath(mangaFolder.toPath());
+            deleteFolderByPath(mangaFolder.toPath(), mangaFolder.getName());
             zipPaths.clear();
             return new ResponseEntity<>(mangaZipFile, headers, HttpStatus.OK);
         }
         return null;
     }
 
-    private void deleteFolderByPath(Path path) {
+    private void deleteFolderByPath(Path path, String folderName) {
         try {
             Path rootPaths = path;
             Files.walk(rootPaths)
                     .sorted(Comparator.reverseOrder())
                     .map(Path::toFile)
                     .forEach(File::delete);
-            System.out.println("Deleted Manga folder");
+            System.out.println("Deleted " + folderName + " folder");
         } catch (IOException e) {
             System.out.println(e);
         }
