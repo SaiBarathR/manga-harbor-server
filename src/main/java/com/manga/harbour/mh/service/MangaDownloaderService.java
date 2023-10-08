@@ -13,7 +13,6 @@ import org.springframework.stereotype.Service;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -23,40 +22,13 @@ import java.util.zip.ZipOutputStream;
 @Service
 public class MangaDownloaderService {
 
-    private final List<String> volumeZipPaths = new ArrayList<>();
+    private final List<String> zipPaths = new ArrayList<>();
 
     @Autowired
     private MangaImageService ImageService;
 
-    public byte[] createMangaZipFile() {
-        try (ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream(); ZipOutputStream zipOutputStream = new ZipOutputStream(byteArrayOutputStream)) {
-            for (String volumeZipPath : volumeZipPaths) {
-                File volumeZipFile = new File(volumeZipPath);
-                if (volumeZipFile.exists()) {
-                    try (FileInputStream fis = new FileInputStream(volumeZipFile)) {
-                        ZipEntry zipEntry = new ZipEntry(volumeZipFile.getName());
-                        zipOutputStream.putNextEntry(zipEntry);
-                        byte[] buffer = new byte[1024];
-                        int length;
-                        while ((length = fis.read(buffer)) > 0) {
-                            zipOutputStream.write(buffer, 0, length);
-                        }
-                        zipOutputStream.closeEntry();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                } else {
-                    System.out.println("Volume zip file not found: " + volumeZipPath);
-                }
-            }
-            zipOutputStream.finish();
-            return byteArrayOutputStream.toByteArray();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
-    public  ResponseEntity<byte[]> createFolders(List<MangaVolume> mangaVolumes) {
+    public ResponseEntity<byte[]> createFolders(List<MangaVolume> mangaVolumes, String method) {
+        boolean zipByChapter = method.equals("byChapter");
         File mangaFolder = new File("Manga");
         mangaFolder.mkdirs();
         for (MangaVolume mangaVolume : mangaVolumes) {
@@ -67,53 +39,67 @@ public class MangaDownloaderService {
             if (chapters.isEmpty()) {
                 continue;
             }
+            int imageIndex = 0;
             for (Chapter chapter : chapters) {
                 String chapterNumber = chapter.getChapter();
                 List<Image> images = chapter.getImages();
                 if (!images.isEmpty()) {
-                    int imageIndex = 0;
-                    File chapterFolder = new File(volumeFolder, "Chapter " + chapterNumber);
+                    imageIndex = zipByChapter ? 0 : imageIndex;
+                    File chapterFolder = new File(zipByChapter ? mangaFolder : volumeFolder, "Chapter " + chapterNumber);
                     chapterFolder.mkdirs();
                     for (Image image : images) {
                         String imageName = "Image" + (++imageIndex) + ".png";
                         byte[] imageBytes = ImageService.retrieveImageData(image.getUrl()).block();
-                        try (FileOutputStream outputStream = new FileOutputStream(new File(chapterFolder, imageName))) {
+                        try (FileOutputStream outputStream = new FileOutputStream(new File((zipByChapter ? chapterFolder : volumeFolder), imageName))) {
                             outputStream.write(imageBytes);
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
                     }
+                    System.out.println("Saved Chapter: " + chapterNumber);
+                    if(zipByChapter){
+                        String chapterZipPath = mangaFolder.getPath() + File.separator + "Chapter " + chapterNumber + ".zip";
+                        System.out.println("Creating Zip for chapter: " + chapterNumber);
+                        createZipFile(chapterFolder.getPath(), chapterZipPath);
+                        zipPaths.add(chapterZipPath);
+                        System.out.println("Saved Chapter Zip: " + chapterNumber);
+                        break;
+                    }
                 }
-                System.out.println("Saved Chapter: " + chapterNumber);
             }
-            System.out.println("Saved volume: " + volumeNumber);
-            String volumeZipPath = mangaFolder.getPath() + File.separator + "Volume " + volumeNumber + ".zip";
-            System.out.println("Creating Zip: " + volumeNumber);
-            createZipFile(volumeFolder.getPath(), volumeZipPath);
-            volumeZipPaths.add(volumeZipPath);
-            System.out.println("Saved Zip: " + volumeNumber);
+            if(!zipByChapter) {
+                System.out.println("Saved volume: " + volumeNumber);
+                String volumeZipPath = mangaFolder.getPath() + File.separator + "Volume " + volumeNumber + ".zip";
+                System.out.println("Creating Zip: " + volumeNumber);
+                createZipFile(volumeFolder.getPath(), volumeZipPath);
+                zipPaths.add(volumeZipPath);
+                System.out.println("Saved Zip: " + volumeNumber);
+            }
         }
         if (!mangaVolumes.isEmpty()) {
             byte[] mangaZipFile = createMangaZipFile();
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
             headers.setContentDispositionFormData("attachment", "manga.zip");
-            try {
-                Path rootPaths= mangaFolder.toPath();
-                Files.walk(rootPaths)
-                        .sorted(Comparator.reverseOrder())
-                        .map(Path::toFile)
-                        .forEach(File::delete);
-                System.out.println("Deleted Manga folder");
-            }
-            catch (IOException e){
-                System.out.println(e);
-            }
+            deleteFolderByPath(mangaFolder.toPath());
+            zipPaths.clear();
             return new ResponseEntity<>(mangaZipFile, headers, HttpStatus.OK);
         }
         return null;
     }
 
+    private void deleteFolderByPath(Path path) {
+        try {
+            Path rootPaths = path;
+            Files.walk(rootPaths)
+                    .sorted(Comparator.reverseOrder())
+                    .map(Path::toFile)
+                    .forEach(File::delete);
+            System.out.println("Deleted Manga folder");
+        } catch (IOException e) {
+            System.out.println(e);
+        }
+    }
 
     private void createZipFile(String folderPath, String zipFileName) {
         try {
@@ -133,6 +119,35 @@ public class MangaDownloaderService {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    public byte[] createMangaZipFile() {
+        try (ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream(); ZipOutputStream zipOutputStream = new ZipOutputStream(byteArrayOutputStream)) {
+            for (String zipPath : zipPaths) {
+                File volumeZipFile = new File(zipPath);
+                if (volumeZipFile.exists()) {
+                    try (FileInputStream fis = new FileInputStream(volumeZipFile)) {
+                        ZipEntry zipEntry = new ZipEntry(volumeZipFile.getName());
+                        zipOutputStream.putNextEntry(zipEntry);
+                        byte[] buffer = new byte[1024];
+                        int length;
+                        while ((length = fis.read(buffer)) > 0) {
+                            zipOutputStream.write(buffer, 0, length);
+                        }
+                        zipOutputStream.closeEntry();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                } else {
+                    System.out.println("zip file not found: " + zipPath);
+                }
+            }
+            zipOutputStream.finish();
+            return byteArrayOutputStream.toByteArray();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 
 }
