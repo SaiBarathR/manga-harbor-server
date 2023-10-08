@@ -1,33 +1,15 @@
 package com.manga.harbour.mh.entity;
 
-import java.util.List;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
-public class MangaVolumeDTO {
+import java.util.List;
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class MangaVolume {
     private String volume;
     private List<Chapter> chapters;
-
-    public MangaVolumeDTO() {
-    }
-
-    public MangaVolumeDTO(String volume, List<Chapter> chapters) {
-        this.volume = volume;
-        this.chapters = chapters;
-    }
-
-    public String getVolume() {
-        return volume;
-    }
-
-    public void setVolume(String volume) {
-        this.volume = volume;
-    }
-
-    public List<Chapter> getChapters() {
-        return chapters;
-    }
-
-    public void setChapters(List<Chapter> chapters) {
-        this.chapters = chapters;
-    }
 }
 
