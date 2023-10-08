@@ -11,7 +11,7 @@ import java.io.IOException;
 import java.util.List;
 
 @RestController
-@CrossOrigin(origins = "*")
+@CrossOrigin(value = {"*"}, exposedHeaders = {"Content-Disposition"})
 @RequestMapping("/manga/download")
 public class MangaDownloaderController {
     @Autowired
@@ -22,19 +22,19 @@ public class MangaDownloaderController {
     @GetMapping("/{mangaId}")
     public void getManga(@PathVariable String mangaId, HttpServletResponse response) {
         List<MangaVolume> mangaVolumes = mangaService.getMangaVolumesById(mangaId, null, null);
-        mangaDownloaderService.generateMangaAsZip(mangaVolumes, "byVolume", response);
+        mangaDownloaderService.generateMangaAsZip(mangaId, mangaVolumes, "byVolume", response);
     }
 
     @GetMapping("{mangaId}/{volume}")
     public void downloadVolume(@PathVariable("mangaId") String mangaId, @PathVariable("volume") String volume, HttpServletResponse response) {
         List<MangaVolume> mangaVolumes = mangaService.getMangaVolumesById(mangaId, volume, null);
-        mangaDownloaderService.generateMangaAsZip(mangaVolumes, "byVolume", response);
+        mangaDownloaderService.generateMangaAsZip(mangaId, mangaVolumes, "byVolume", response);
     }
 
     @GetMapping("{mangaId}/{volume}/{chapter}")
     public void downloadChapter(@PathVariable("mangaId") String mangaId, @PathVariable("volume") String volume,
                                 @PathVariable("chapter") String chapter, HttpServletResponse response) {
         List<MangaVolume> mangaVolumes = mangaService.getMangaVolumesById(mangaId, volume, chapter);
-        mangaDownloaderService.generateMangaAsZip(mangaVolumes, "byChapter", response);
+        mangaDownloaderService.generateMangaAsZip(mangaId, mangaVolumes, "byChapter", response);
     }
 }
