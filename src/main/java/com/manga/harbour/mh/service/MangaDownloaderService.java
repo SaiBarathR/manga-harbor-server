@@ -27,7 +27,6 @@ public class MangaDownloaderService {
 
     public MangaDownloadDetails createFileStructureForManga(String mangaId, List<MangaVolume> mangaVolumes, String method) {
         MangaDownloadDetails mangaDownloadDetails = new MangaDownloadDetails();
-        mangaDownloadDetails.setZipPaths(new ArrayList<>());
         boolean zipByChapter = method.equals("byChapter");
         String uniqueID = UUID.randomUUID().toString();
         String mangaName = mangaService.getMangaName(mangaId);
@@ -63,6 +62,7 @@ public class MangaDownloaderService {
                     }
                     System.out.println("Saved " + chapterName);
                     if (zipByChapter) {
+                        mangaDownloadDetails.setChapters(chapterNumber);
                         generateZipFiles(mangaDownloadDetails, mangaFolder.getPath(), chapterFolder.getPath(), chapterFolder.toPath(), chapterName);
                         break;
                     }
@@ -70,6 +70,7 @@ public class MangaDownloaderService {
             }
             if (!zipByChapter) {
                 System.out.println("Saved " + volumeName);
+                mangaDownloadDetails.updateVolumeList(volumeNumber);
                 generateZipFiles(mangaDownloadDetails, mangaFolder.getPath(), volumeFolder.getPath(), volumeFolder.toPath(), volumeName);
             }
         }
@@ -80,8 +81,6 @@ public class MangaDownloaderService {
                         .mapToLong(p -> p.toFile().length())
                         .sum();
                 System.out.println(mangaName + " Size: " + folderSize);
-
-                mangaDownloadDetails.setMangaData(mangaVolumes);
                 mangaDownloadDetails.setMethod(method);
                 mangaDownloadDetails.setFolderSize(folderSize);
                 mangaDownloadDetails.setFolderPath(mangaFolder.toPath());
@@ -102,7 +101,7 @@ public class MangaDownloaderService {
         response.setHeader(HttpHeaders.EXPIRES, "0");
         response.setHeader("file-size", String.valueOf(mangaDetails.getFolderSize()));
         try (ServletOutputStream outputStream = response.getOutputStream()) {
-            createZipStream(mangaDetails.getMangaData(), mangaDetails.getMethod(), mangaDetails.getZipPaths(), outputStream);
+            createZipStream(mangaDetails.getMethod(), mangaDetails.getZipPaths(), outputStream);
             outputStream.flush();
         } catch (IOException e) {
             e.printStackTrace();
@@ -111,7 +110,7 @@ public class MangaDownloaderService {
         }
     }
 
-    private void createZipStream(List<MangaVolume> mangaVolumes, String method, List<String> zipPaths, OutputStream outputStream) {
+    private void createZipStream(String method, List<String> zipPaths, OutputStream outputStream) {
         try (ZipOutputStream zipOutputStream = new ZipOutputStream(outputStream)) {
             for (String zipPath : zipPaths) {
                 File zipFile = new File(zipPath);
