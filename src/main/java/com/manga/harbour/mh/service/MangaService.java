@@ -1,37 +1,29 @@
 package com.manga.harbour.mh.service;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.manga.harbour.mh.entity.Chapter;
+import com.manga.harbour.mh.entity.Image;
+import com.manga.harbour.mh.entity.MangaVolume;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.util.UriComponentsBuilder;
-
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.manga.harbour.mh.entity.Chapter;
-import com.manga.harbour.mh.entity.MangaVolume;
-
 import reactor.core.publisher.Mono;
 
-import com.manga.harbour.mh.entity.Image;
+import java.io.IOException;
+import java.util.*;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class MangaService {
 
     private final WebClient client;
-    private final ScheduledExecutorService executorService;
 
     @Autowired
     private MangaImageService ImageService;
@@ -42,7 +34,7 @@ public class MangaService {
                 .codecs(codecs -> codecs.defaultCodecs()
                         .maxInMemorySize(25000 * 1024))
                 .build();
-        this.executorService = Executors.newScheduledThreadPool(1);
+        ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
     }
 
     public List<MangaVolume> getMangaChapterListById(String id) {
@@ -120,7 +112,7 @@ public class MangaService {
             extractMangaIdsFromResponse(mangaData).forEach(id -> queryParams.add("manga[]", id));
             UriComponentsBuilder statsBuilder = UriComponentsBuilder.fromPath("statistics/manga").queryParams(queryParams);
             Mono<String> statsResponse = client.get().uri(statsBuilder.build().toUriString()).retrieve().bodyToMono(String.class).onErrorResume(throwable -> Mono.empty());
-            return statsResponse.map(statsData -> {
+            return statsResponse.mapNotNull(statsData -> {
                 try {
                     ObjectMapper objectMapper = new ObjectMapper();
                     Map<String, Object> mangaObject = objectMapper.readValue(mangaData, new TypeReference<Map<String, Object>>() {
