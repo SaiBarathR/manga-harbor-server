@@ -13,7 +13,9 @@ import org.springframework.stereotype.Service;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.*;
+import java.util.Comparator;
+import java.util.List;
+import java.util.UUID;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -22,6 +24,7 @@ public class MangaDownloaderService {
 
     @Autowired
     private MangaImageService ImageService;
+
     @Autowired
     private MangaService mangaService;
 
@@ -32,46 +35,52 @@ public class MangaDownloaderService {
         String mangaName = mangaService.getMangaName(mangaId);
         String mangaFolderName = uniqueID + " split_here" + mangaName;
         File mangaFolder = new File(mangaFolderName);
-        mangaFolder.mkdirs();
-        for (MangaVolume mangaVolume : mangaVolumes) {
-            String volumeNumber = mangaVolume.getVolume();
-            String volumeName = mangaName + " Volume " + volumeNumber;
-            File volumeFolder = new File(mangaFolder, volumeName);
-            volumeFolder.mkdirs();
-            List<Chapter> chapters = mangaVolume.getChapters();
-            if (chapters.isEmpty()) {
-                continue;
-            }
-            int imageIndex = 0;
-            for (Chapter chapter : chapters) {
-                String chapterNumber = chapter.getChapter();
-                String chapterName = mangaName + " Chapter " + chapterNumber;
-                List<Image> images = chapter.getImages();
-                if (!images.isEmpty()) {
-                    imageIndex = zipByChapter ? 0 : imageIndex;
-                    File chapterFolder = new File(zipByChapter ? mangaFolder : volumeFolder, chapterName);
-                    chapterFolder.mkdirs();
-                    for (Image image : images) {
-                        String imageName = "Image" + (++imageIndex) + ".png";
-                        byte[] imageBytes = ImageService.retrieveImageData(image.getUrl()).block();
-                        try (FileOutputStream outputStream = new FileOutputStream(new File((zipByChapter ? chapterFolder : volumeFolder), imageName))) {
-                            outputStream.write(imageBytes);
-                        } catch (IOException e) {
-                            e.printStackTrace();
+        if (mangaFolder.exists() || mangaFolder.mkdirs()) {
+            for (MangaVolume mangaVolume : mangaVolumes) {
+                String volumeNumber = mangaVolume.getVolume();
+                String volumeName = mangaName + " Volume " + volumeNumber;
+                File volumeFolder = new File(mangaFolder, volumeName);
+                if (volumeFolder.exists() || volumeFolder.mkdirs()) {
+                    List<Chapter> chapters = mangaVolume.getChapters();
+                    if (chapters.isEmpty()) {
+                        continue;
+                    }
+                    int imageIndex = 0;
+                    for (Chapter chapter : chapters) {
+                        String chapterNumber = chapter.getChapter();
+                        String chapterName = mangaName + " Chapter " + chapterNumber;
+                        List<Image> images = chapter.getImages();
+                        if (!images.isEmpty()) {
+                            imageIndex = zipByChapter ? 0 : imageIndex;
+                            File chapterFolder = new File(zipByChapter ? mangaFolder : volumeFolder, chapterName);
+                            if (chapterFolder.exists() || chapterFolder.mkdirs()) {
+
+                                for (Image image : images) {
+                                    String imageName = "Image" + (++imageIndex) + ".png";
+                                    byte[] imageBytes = ImageService.retrieveImageData(image.getUrl()).block();
+                                    try (FileOutputStream outputStream = new FileOutputStream(new File((zipByChapter ? chapterFolder : volumeFolder), imageName))) {
+                                        assert imageBytes != null;
+                                        outputStream.write(imageBytes);
+                                    } catch (IOException e) {
+                                        e.printStackTrace();
+                                    }
+                                }
+                                System.out.println("Saved " + chapterName);
+                                if (zipByChapter) {
+                                    mangaDownloadDetails.setChapters(chapterNumber);
+                                    generateZipFiles(mangaDownloadDetails, mangaFolder.getPath(), chapterFolder.getPath(), chapterFolder.toPath(), chapterName);
+                                    break;
+                                }
+                            }
+
                         }
                     }
-                    System.out.println("Saved " + chapterName);
-                    if (zipByChapter) {
-                        mangaDownloadDetails.setChapters(chapterNumber);
-                        generateZipFiles(mangaDownloadDetails, mangaFolder.getPath(), chapterFolder.getPath(), chapterFolder.toPath(), chapterName);
-                        break;
-                    }
                 }
-            }
-            if (!zipByChapter) {
-                System.out.println("Saved " + volumeName);
-                mangaDownloadDetails.updateVolumeList(volumeNumber);
-                generateZipFiles(mangaDownloadDetails, mangaFolder.getPath(), volumeFolder.getPath(), volumeFolder.toPath(), volumeName);
+                if (!zipByChapter) {
+                    System.out.println("Saved " + volumeName);
+                    mangaDownloadDetails.updateVolumeList(volumeNumber);
+                    generateZipFiles(mangaDownloadDetails, mangaFolder.getPath(), volumeFolder.getPath(), volumeFolder.toPath(), volumeName);
+                }
             }
         }
         if (!mangaVolumes.isEmpty()) {
@@ -86,7 +95,7 @@ public class MangaDownloaderService {
                 mangaDownloadDetails.setFolderPath(mangaFolder.toPath());
                 mangaDownloadDetails.setName(mangaFolder.getName());
                 return mangaDownloadDetails;
-            } catch (IOException e) {
+            } catch (IOException | SecurityException e) {
                 e.printStackTrace();
             }
         }
@@ -167,13 +176,12 @@ public class MangaDownloaderService {
 
     private void deleteFolderByPath(Path path, String folderName) {
         try {
-            Path rootPaths = path;
-            Files.walk(rootPaths)
+            Files.walk(path)
                     .sorted(Comparator.reverseOrder())
                     .map(Path::toFile)
                     .forEach(File::delete);
             System.out.println("Deleted " + folderName + " folder");
-        } catch (IOException e) {
+        } catch (IOException | SecurityException e) {
             System.out.println(e);
         }
     }
