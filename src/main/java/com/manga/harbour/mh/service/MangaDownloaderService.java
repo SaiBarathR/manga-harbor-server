@@ -6,6 +6,8 @@ import com.manga.harbour.mh.entity.MangaDownloadDetails;
 import com.manga.harbour.mh.entity.MangaVolume;
 import jakarta.servlet.ServletOutputStream;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
@@ -21,6 +23,7 @@ import java.util.zip.ZipOutputStream;
 
 @Service
 public class MangaDownloaderService {
+    Logger logger = LoggerFactory.getLogger(MangaDownloaderService.class);
 
     @Autowired
     private MangaImageService ImageService;
@@ -62,10 +65,10 @@ public class MangaDownloaderService {
                                         assert imageBytes != null;
                                         outputStream.write(imageBytes);
                                     } catch (IOException e) {
-                                        e.printStackTrace();
+                                        logger.trace("Unable to convert image url to byte data", e);
                                     }
                                 }
-                                System.out.println("Saved " + chapterName);
+                                logger.info("Saved " + chapterName);
                                 if (zipByChapter) {
                                     mangaDownloadDetails.setChapters(chapterNumber);
                                     generateZipFiles(mangaDownloadDetails, mangaFolder.getPath(), chapterFolder.getPath(), chapterFolder.toPath(), chapterName);
@@ -77,7 +80,7 @@ public class MangaDownloaderService {
                     }
                 }
                 if (!zipByChapter) {
-                    System.out.println("Saved " + volumeName);
+                    logger.info("Saved " + volumeName);
                     mangaDownloadDetails.updateVolumeList(volumeNumber);
                     generateZipFiles(mangaDownloadDetails, mangaFolder.getPath(), volumeFolder.getPath(), volumeFolder.toPath(), volumeName);
                 }
@@ -89,14 +92,14 @@ public class MangaDownloaderService {
                         .filter(p -> p.toFile().isFile())
                         .mapToLong(p -> p.toFile().length())
                         .sum();
-                System.out.println(mangaName + " Size: " + folderSize);
+                logger.info(mangaName + " Size: " + folderSize);
                 mangaDownloadDetails.setMethod(method);
                 mangaDownloadDetails.setFolderSize(folderSize);
                 mangaDownloadDetails.setFolderPath(mangaFolder.toPath());
                 mangaDownloadDetails.setName(mangaFolder.getName());
                 return mangaDownloadDetails;
             } catch (IOException | SecurityException e) {
-                e.printStackTrace();
+                logger.trace("Unable to determine file size", e);
             }
         }
         return mangaDownloadDetails;
@@ -113,7 +116,7 @@ public class MangaDownloaderService {
             createZipStream(mangaDetails.getMethod(), mangaDetails.getZipPaths(), outputStream);
             outputStream.flush();
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.trace("Unable to stream zip file", e);
         } finally {
             deleteFolderByPath(mangaDetails.getFolderPath(), mangaDetails.getName());
         }
@@ -134,14 +137,14 @@ public class MangaDownloaderService {
                         }
                         zipOutputStream.closeEntry();
                     } catch (IOException e) {
-                        e.printStackTrace();
+                        logger.trace("Streaming failed while converting file to byte data", e);
                     }
                 } else {
-                    System.out.println("zip file not found: " + zipPath);
+                    logger.info("zip file not found: " + zipPath);
                 }
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.trace("Streaming failed while converting zip file to outputStream", e);
         }
     }
 
@@ -156,21 +159,21 @@ public class MangaDownloaderService {
                         Files.copy(path, zipOutputStream);
                         zipOutputStream.closeEntry();
                     } catch (IOException e) {
-                        e.printStackTrace();
+                        logger.trace("converting folder to zip failed for:" + zipFileName, e);
                     }
                 });
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.trace("creating zip from folder failed for:" + zipFileName, e);
         }
     }
 
     private void generateZipFiles(MangaDownloadDetails mangaDownloadDetails, String parentPath, String childPath, Path path, String fileName) {
         String zipPath = parentPath + File.separator + fileName + ".zip";
-        System.out.println("Creating Zip for: " + fileName);
+        logger.info("Creating Zip for: " + fileName);
         writeFilesInToZipFile(childPath, zipPath);
         mangaDownloadDetails.updateZipPath(zipPath);
-        System.out.println("Saved Zip: " + fileName);
+        logger.info("Saved Zip: " + fileName);
         deleteFolderByPath(path, fileName);
     }
 
@@ -180,9 +183,9 @@ public class MangaDownloaderService {
                     .sorted(Comparator.reverseOrder())
                     .map(Path::toFile)
                     .forEach(File::delete);
-            System.out.println("Deleted " + folderName + " folder");
+            logger.info("Deleted " + folderName + " folder");
         } catch (IOException | SecurityException e) {
-            System.out.println(e);
+            logger.trace("deleteFolderByPath failed for folder: " + folderName, e);
         }
     }
 

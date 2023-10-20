@@ -5,6 +5,8 @@ import com.manga.harbour.mh.entity.MangaVolume;
 import com.manga.harbour.mh.service.MangaDownloaderService;
 import com.manga.harbour.mh.service.MangaService;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,6 +16,8 @@ import java.util.List;
 @CrossOrigin(value = {"*"}, exposedHeaders = {"Content-Disposition", "file-size"})
 @RequestMapping("/manga/download")
 public class MangaDownloaderController {
+    Logger logger = LoggerFactory.getLogger(MangaDownloaderService.class);
+
     @Autowired
     private MangaService mangaService;
     @Autowired
@@ -30,7 +34,7 @@ public class MangaDownloaderController {
             List<MangaVolume> mangaVolumes = mangaService.getMangaVolumesById(mangaId, null, null);
             return mangaDownloaderService.createFileStructureForManga(mangaId, mangaVolumes, "byVolume");
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.trace("unable to prepare download data for the manga with id: " + mangaId, e);
             return null;
         }
     }
@@ -41,7 +45,7 @@ public class MangaDownloaderController {
             List<MangaVolume> mangaVolumes = mangaService.getMangaVolumesById(mangaId, volume, null);
             return mangaDownloaderService.createFileStructureForManga(mangaId, mangaVolumes, "byVolume");
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.trace("unable to prepare download data for the manga volume with id: " + mangaId + " volume: " + volume, e);
             return null;
         }
     }
@@ -51,10 +55,10 @@ public class MangaDownloaderController {
         try {
             List<MangaVolume> mangaVolumes = mangaService.getMangaVolumesById(mangaId, volume, chapter);
             MangaDownloadDetails mangaDownloadDetails = mangaDownloaderService.createFileStructureForManga(mangaId, mangaVolumes, "byChapter");
-            System.out.println("mangaDownloadDetails" + mangaDownloadDetails.toString());
+            logger.info(mangaDownloadDetails.toString());
             return mangaDownloadDetails;
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.trace("unable to prepare download data for the manga chapter with id: " + mangaId + " volume: " + volume + " chapter: " + chapter, e);
             return null;
         }
 
