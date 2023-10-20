@@ -6,6 +6,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.manga.harbour.mh.entity.Chapter;
 import com.manga.harbour.mh.entity.Image;
 import com.manga.harbour.mh.entity.MangaVolume;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
@@ -22,6 +24,7 @@ import java.util.concurrent.TimeUnit;
 
 @Service
 public class MangaService {
+    Logger logger = LoggerFactory.getLogger(MangaService.class);
 
     private final WebClient client;
 
@@ -43,8 +46,14 @@ public class MangaService {
     }
 
     public List<MangaVolume> getMangaVolumesById(String id, String selectedVolume, String selectedChapter) {
-        String mangaData = client.get().uri("/manga/" + id + "/aggregate?translatedLanguage[0]=en").retrieve().bodyToMono(String.class).block();
-        return parseAndTransformMangaData(mangaData, selectedVolume, selectedChapter);
+        try {
+            String mangaData = client.get().uri("/manga/" + id + "/aggregate?translatedLanguage[0]=en").retrieve().bodyToMono(String.class).block();
+            return parseAndTransformMangaData(mangaData, selectedVolume, selectedChapter);
+        }
+        catch (Exception e){
+            logger.trace("Error",e);
+        }
+        return null;
     }
 
     public String getMangaName(String mangaId) {
@@ -74,7 +83,7 @@ public class MangaService {
                     }
                 }
             } catch (IOException e) {
-                e.printStackTrace();
+                logger.trace("unable to get manga title for manga with id: " + mangaId, e);
             }
         }
         return "";
@@ -98,10 +107,10 @@ public class MangaService {
                     .fromHttpUrl("https://api.mangadex.org/manga/" + id)
                     .queryParam("includes[]", "manga", "cover_art", "author", "artist", "tag", "creator");
             Mono<String> mangaResponse = client.get().uri(builder.build().toUriString()).retrieve().bodyToMono(String.class);
-            System.out.println("Fetched manga details from mangadex for Id: " + id);
+            logger.info("Fetched manga details from mangadex for Id: " + id);
             return constructMangaData(mangaResponse);
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.trace("getMangaInfoById failed for manga with id: " + id, e);
         }
         return null;
     }
@@ -139,7 +148,7 @@ public class MangaService {
                     data.put("statsResponse", statsObject);
                     return data;
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    logger.trace("unable to construct json for manga data and stats response for response: " + mangaResponse, e);
                 }
                 return null;
             });
@@ -161,7 +170,7 @@ public class MangaService {
                 }
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.trace("unable prepare manga id's array for stats api request for manga: " + mangaData, e);
         }
         return mangaIds;
     }
@@ -194,7 +203,7 @@ public class MangaService {
             }
             return mangaVolumes;
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.trace("unable to prepare chapter list for manga: "+ mangaData,e);
             return Collections.emptyList();
         }
     }
@@ -242,20 +251,20 @@ public class MangaService {
                         image.setUrl(imageUrl);
                         images.add(image);
                     }
-                    System.out.println("Fetched Chapter: " + chapterNumber);
+                    logger.info("Fetched Chapter: " + chapterNumber);
                     chapterDTO.setImages(images);
                     chapters.add(chapterDTO);
                 }
                 if (chapters.isEmpty()) {
                     continue;
                 }
-                System.out.println("Fetched volume: " + volumeNumber);
+                logger.info("Fetched volume: " + volumeNumber);
                 mangaVolume.setChapters(chapters);
                 mangaVolumes.add(mangaVolume);
             }
             return mangaVolumes;
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.trace("unable to construct manga volume list for manga: "+ mangaData,e);
             return Collections.emptyList();
         }
     }
@@ -278,16 +287,15 @@ public class MangaService {
                     rateLimitedExecutor.schedule(() -> {
                         String imageUrl = baseUrl + "/data/" + chapterHash + "/" + imageData;
                         imageUrls.add(imageUrl);
-                        System.out.println("Fetched image: " + imageUrl);
+                        logger.info("Fetched image: " + imageUrl);
                     }, delayMilliseconds, TimeUnit.MILLISECONDS);
                 }
                 rateLimitedExecutor.shutdown();
                 rateLimitedExecutor.awaitTermination(1, TimeUnit.HOURS);
             } catch (IOException | InterruptedException e) {
-                e.printStackTrace();
+                logger.trace("unable to create /at-home/server/ image url list for chapter id: "+ chapterId,e);
             }
         }
         return imageUrls;
     }
-
 }
