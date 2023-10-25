@@ -13,6 +13,8 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
 
 import java.io.*;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
@@ -105,9 +107,11 @@ public class MangaDownloaderService {
         return mangaDownloadDetails;
     }
 
-    public void streamZipData(MangaDownloadDetails mangaDetails, HttpServletResponse response) {
+    public void streamZipData(MangaDownloadDetails mangaDetails, HttpServletResponse response) throws UnsupportedEncodingException {
         response.setContentType("application/zip");
-        response.setHeader("Content-Disposition", "attachment; filename=\"" + mangaDetails.getName() + ".zip\"");
+        String encodedFilename = URLEncoder.encode(mangaDetails.getName(), StandardCharsets.UTF_8.toString());
+
+        response.setHeader("Content-Disposition", "attachment; filename=\"" + encodedFilename  + ".zip\"");
         response.setHeader(HttpHeaders.CACHE_CONTROL, "no-cache, no-store, must-revalidate");
         response.setHeader(HttpHeaders.PRAGMA, "no-cache");
         response.setHeader(HttpHeaders.EXPIRES, "0");
