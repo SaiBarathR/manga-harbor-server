@@ -50,18 +50,17 @@ public class MangaDownloaderService {
                     if (chapters.isEmpty()) {
                         continue;
                     }
-                    int imageIndex = 0;
                     for (Chapter chapter : chapters) {
                         String chapterNumber = chapter.getChapter();
                         String chapterName = mangaName + " Chapter " + chapterNumber;
                         List<Image> images = chapter.getImages();
                         if (!images.isEmpty()) {
-                            imageIndex = zipByChapter ? 0 : imageIndex;
+                            int imageIndex = 0;
                             File chapterFolder = new File(zipByChapter ? mangaFolder : volumeFolder, chapterName);
                             if (chapterFolder.exists() || chapterFolder.mkdirs()) {
 
                                 for (Image image : images) {
-                                    String imageName = "Image" + (++imageIndex) + ".png";
+                                    String imageName = volumeName + " Chapter " + chapterNumber + " img " + (++imageIndex) + ".png";
                                     byte[] imageBytes = ImageService.retrieveImageData(image.getUrl()).block();
                                     try (FileOutputStream outputStream = new FileOutputStream(new File((zipByChapter ? chapterFolder : volumeFolder), imageName))) {
                                         assert imageBytes != null;
@@ -70,6 +69,7 @@ public class MangaDownloaderService {
                                         logger.trace("Unable to convert image url to byte data", e);
                                     }
                                 }
+
                                 logger.info("Saved " + chapterName);
                                 if (zipByChapter) {
                                     mangaDownloadDetails.setChapters(chapterNumber);
