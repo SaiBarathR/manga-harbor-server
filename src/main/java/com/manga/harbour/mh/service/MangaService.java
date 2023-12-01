@@ -118,9 +118,13 @@ public class MangaService {
     private Mono<Object> constructMangaData(Mono<String> mangaResponse) {
         return mangaResponse.flatMap(mangaData -> {
             MultiValueMap<String, String> queryParams = new LinkedMultiValueMap<>();
-            extractMangaIdsFromResponse(mangaData).forEach(id -> queryParams.add("manga[]", id));
+//            extractMangaIdsFromResponse(mangaData).forEach(id -> queryParams.add("manga[]", id));
+            List<String> mangaIds = extractMangaIdsFromResponse(mangaData);
+            mangaIds.forEach(id -> queryParams.add("manga[]", id));
+            logger.info("id for stats" + queryParams);
             UriComponentsBuilder statsBuilder = UriComponentsBuilder.fromPath("statistics/manga").queryParams(queryParams);
             Mono<String> statsResponse = client.get().uri(statsBuilder.build().toUriString()).retrieve().bodyToMono(String.class).onErrorResume(throwable -> Mono.empty());
+            logger.info("stat resp" + statsResponse);
             return statsResponse.mapNotNull(statsData -> {
                 try {
                     ObjectMapper objectMapper = new ObjectMapper();
@@ -167,6 +171,13 @@ public class MangaService {
                     if (mangaNode.has("id")) {
                         mangaIds.add(mangaNode.get("id").asText());
                     }
+                }
+            }else{
+                if(!rootNode.get("data").isArray()){
+                    mangaIds.add(rootNode.get("data").get("id").asText());
+                }
+                else {
+                    logger.info("No manga found for search");
                 }
             }
         } catch (IOException e) {
