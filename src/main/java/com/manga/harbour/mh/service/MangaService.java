@@ -127,24 +127,22 @@ public class MangaService {
             logger.info("stat resp" + statsResponse);
             return statsResponse.mapNotNull(statsData -> {
                 try {
+                    logger.info("inside stats resp" + statsData);
                     ObjectMapper objectMapper = new ObjectMapper();
                     Map<String, Object> mangaObject = objectMapper.readValue(mangaData, new TypeReference<Map<String, Object>>() {
                     });
                     Map<String, Object> statsObject = objectMapper.readValue(statsData, new TypeReference<Map<String, Object>>() {
                     });
-                    if (mangaObject.containsKey("data") && mangaObject.get("data") instanceof List) {
-                        List<Map<String, Object>> mangaList = (List<Map<String, Object>>) mangaObject.get("data");
-                        for (Map<String, Object> mangaItem : mangaList) {
-                            List<Map<String, Object>> relationshipsList = (List<Map<String, Object>>) mangaItem.get("relationships");
-                            String mangaId = mangaItem.get("id").toString();
-                            for (Map<String, Object> relationship : relationshipsList) {
-                                if ("cover_art".equals(relationship.get("type"))) {
-                                    String fileName = ((Map<String, Object>) relationship.get("attributes")).get("fileName").toString();
-                                    String imageUrl = "https://uploads.mangadex.org/covers/" + mangaId + "/" + fileName;
-                                    mangaItem.put("image", imageUrl);
-                                    break;
-                                }
+                    if (mangaObject.containsKey("data")) {
+                        if (mangaObject.get("data") instanceof List){
+                            List<Map<String, Object>> mangaList = (List<Map<String, Object>>) mangaObject.get("data");
+                            for (Map<String, Object> mangaItem : mangaList) {
+                                mangaItem.put("image", getCoverArt(mangaItem));
                             }
+                        }
+                        else{
+                            Map<String, Object> mangaItem = (Map<String, Object>) mangaObject.get("data");
+                            mangaItem.put("image", getCoverArt(mangaItem));
                         }
                     }
                     Map<String, Object> data = new HashMap<>();
@@ -160,6 +158,19 @@ public class MangaService {
 
     }
 
+    public String getCoverArt(Map<String, Object> mangaItem) {
+        List<Map<String, Object>> relationshipsList = (List<Map<String, Object>>) mangaItem.get("relationships");
+        String mangaId = mangaItem.get("id").toString();
+        for (Map<String, Object> relationship : relationshipsList) {
+            if ("cover_art".equals(relationship.get("type"))) {
+                String fileName = ((Map<String, Object>) relationship.get("attributes")).get("fileName").toString();
+                String imageUrl = "https://uploads.mangadex.org/covers/" + mangaId + "/" + fileName;
+                logger.info("fetched cover art url: " + imageUrl);
+                return imageUrl;
+            }
+        }
+        return null;
+    }
     private List<String> extractMangaIdsFromResponse(String mangaData) {
         List<String> mangaIds = new ArrayList<>();
         try {
