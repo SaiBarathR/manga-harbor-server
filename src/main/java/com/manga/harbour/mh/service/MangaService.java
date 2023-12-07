@@ -201,8 +201,14 @@ public class MangaService {
         ObjectMapper objectMapper = new ObjectMapper();
         try {
             Map<String, Object> jsonMap = objectMapper.readValue(mangaData, Map.class);
-            Map<String, Map<String, Object>> volumesMap = (Map<String, Map<String, Object>>) jsonMap.get("volumes");
 
+            ArrayList volume= (ArrayList) jsonMap.get("volumes");
+            if(volume.isEmpty()){
+                logger.info("No chapters found for manga");
+                return Collections.emptyList();
+            }
+
+            Map<String, Map<String, Object>> volumesMap = (Map<String, Map<String, Object>>) jsonMap.get("volumes");
             List<MangaVolume> mangaVolumes = new ArrayList<>();
 
             for (Map.Entry<String, Map<String, Object>> volumeEntry : volumesMap.entrySet()) {
