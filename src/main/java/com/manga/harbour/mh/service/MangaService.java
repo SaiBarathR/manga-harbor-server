@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.manga.harbour.mh.entity.Chapter;
 import com.manga.harbour.mh.entity.Image;
 import com.manga.harbour.mh.entity.MangaVolume;
+import jakarta.servlet.ServletOutputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -245,6 +246,11 @@ public class MangaService {
         ObjectMapper objectMapper = new ObjectMapper();
         try {
             Map<String, Object> jsonMap = objectMapper.readValue(mangaData, Map.class);
+            if(Objects.equals(jsonMap.get("volumes").toString(), "[]")){
+                logger.info("No chapters found for manga");
+                return Collections.emptyList();
+            }
+            logger.info("Fetched manga data from mangadex for Id: " + jsonMap.get("id"));
             Map<String, Map<String, Object>> volumesMap = (Map<String, Map<String, Object>>) jsonMap.get("volumes");
 
             List<MangaVolume> mangaVolumes = new ArrayList<>();

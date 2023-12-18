@@ -1,5 +1,6 @@
 package com.manga.harbour.mh.controller;
 
+import com.manga.harbour.mh.entity.ErrorResponse;
 import com.manga.harbour.mh.entity.MangaDownloadDetails;
 import com.manga.harbour.mh.entity.MangaVolume;
 import com.manga.harbour.mh.service.MangaDownloaderService;
@@ -8,6 +9,8 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.UnsupportedEncodingException;
@@ -30,38 +33,47 @@ public class MangaDownloaderController {
     }
 
     @GetMapping("/{mangaId}")
-    public MangaDownloadDetails getManga(@PathVariable String mangaId) {
+    public ResponseEntity<?> getManga(@PathVariable String mangaId) {
         try {
             List<MangaVolume> mangaVolumes = mangaService.getMangaVolumesById(mangaId, null, null);
-            return mangaDownloaderService.createFileStructureForManga(mangaId, mangaVolumes, "byVolume");
+            if(mangaVolumes.isEmpty()){
+                return new ResponseEntity<>(new ErrorResponse("No manga volumes found for the manga with id: " + mangaId), HttpStatus.NOT_FOUND);
+            }
+            MangaDownloadDetails mangaDownloadDetails = mangaDownloaderService.createFileStructureForManga(mangaId, mangaVolumes, "byVolume");
+            return new ResponseEntity<>(mangaDownloadDetails, HttpStatus.OK);
         } catch (Exception e) {
             logger.trace("unable to prepare download data for the manga with id: " + mangaId, e);
-            return null;
+            return new ResponseEntity<>(new ErrorResponse("Unable to prepare download data for the manga with id: " + mangaId), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
     @GetMapping("{mangaId}/{volume}")
-    public MangaDownloadDetails downloadVolume(@PathVariable("mangaId") String mangaId, @PathVariable("volume") String volume) {
+    public ResponseEntity<?> downloadVolume(@PathVariable("mangaId") String mangaId, @PathVariable("volume") String volume) {
         try {
             List<MangaVolume> mangaVolumes = mangaService.getMangaVolumesById(mangaId, volume, null);
-            return mangaDownloaderService.createFileStructureForManga(mangaId, mangaVolumes, "byVolume");
+            if(mangaVolumes.isEmpty()){
+                return new ResponseEntity<>(new ErrorResponse("No manga volumes found for the manga with id: " + mangaId), HttpStatus.NOT_FOUND);
+            }
+            MangaDownloadDetails mangaDownloadDetails = mangaDownloaderService.createFileStructureForManga(mangaId, mangaVolumes, "byVolume");
+            return new ResponseEntity<>(mangaDownloadDetails, HttpStatus.OK);
         } catch (Exception e) {
             logger.trace("unable to prepare download data for the manga volume with id: " + mangaId + " volume: " + volume, e);
-            return null;
+            return new ResponseEntity<>(new ErrorResponse("Unable to prepare download data for the manga volume with id: " + mangaId + " volume: " + volume), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
     @GetMapping("{mangaId}/{volume}/{chapter}")
-    public MangaDownloadDetails downloadChapter(@PathVariable("mangaId") String mangaId, @PathVariable("volume") String volume, @PathVariable("chapter") String chapter) {
+    public ResponseEntity<?> downloadChapter(@PathVariable("mangaId") String mangaId, @PathVariable("volume") String volume, @PathVariable("chapter") String chapter) {
         try {
             List<MangaVolume> mangaVolumes = mangaService.getMangaVolumesById(mangaId, volume, chapter);
+            if(mangaVolumes.isEmpty()){
+                return new ResponseEntity<>(new ErrorResponse("No manga volumes found for the manga with id: " + mangaId), HttpStatus.NOT_FOUND);
+            }
             MangaDownloadDetails mangaDownloadDetails = mangaDownloaderService.createFileStructureForManga(mangaId, mangaVolumes, "byChapter");
-            logger.info(mangaDownloadDetails.toString());
-            return mangaDownloadDetails;
+            return new ResponseEntity<>(mangaDownloadDetails, HttpStatus.OK);
         } catch (Exception e) {
             logger.trace("unable to prepare download data for the manga chapter with id: " + mangaId + " volume: " + volume + " chapter: " + chapter, e);
-            return null;
+            return new ResponseEntity<>(new ErrorResponse("Unable to prepare download data for the manga chapter with id: " + mangaId + " volume: " + volume + " chapter: " + chapter), HttpStatus.INTERNAL_SERVER_ERROR);
         }
-
     }
 }
