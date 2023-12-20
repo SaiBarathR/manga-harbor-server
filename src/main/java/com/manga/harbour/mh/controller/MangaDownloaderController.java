@@ -17,7 +17,6 @@ import java.io.UnsupportedEncodingException;
 import java.util.List;
 
 @RestController
-@CrossOrigin(value = {"*"}, exposedHeaders = {"Content-Disposition", "file-size"})
 @RequestMapping("/manga/download")
 public class MangaDownloaderController {
     Logger logger = LoggerFactory.getLogger(MangaDownloaderService.class);
