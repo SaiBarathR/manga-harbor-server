@@ -97,7 +97,7 @@ public class MangaService {
                 .queryParam("limit", 4)
                 .queryParam("title", title)
                 .queryParam("includes[]", "cover_art")
-                .queryParam("contentRating[]", "safe", "suggestive");
+                .queryParam("contentRating[]", "safe", "suggestive","pornographic");
         Mono<String> mangaResponse = client.get().uri(builder.build().toUriString()).retrieve().bodyToMono(String.class).onErrorResume(throwable -> Mono.empty());
         return constructMangaData(mangaResponse);
     }
