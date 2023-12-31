@@ -9,8 +9,9 @@ For Client Repo checkout: https://github.com/SaiBarathR/manga-harbor
 - [Features](#features)
 - [Prerequisites](#prerequisites)
 - [Getting Started](#getting-started)
+- [Getting Started with Docker](#getting-started-with-docker)
+- [Configuration](#configuration)
 - [API Endpoints](#api-endpoints)
-- [Usage](#usage)
 - [Integration with Manga Harbor Client](#integration-with-manga-harbor-client)
 - [Contributing](#contributing)
 - [License](#license)
@@ -39,13 +40,84 @@ For Client Repo checkout: https://github.com/SaiBarathR/manga-harbor
    cd manga-harbor-server
    ```
 
-2. **Build and Run the Application:**
+2. **Build the application:**
+
+   ```bash
+   mvn install
+   ```
+
+3. **Run the application:**
 
    ```bash
    mvn spring-boot:run
    ```
 
+   The application will start running at `http://localhost:9000`.   
+   
+## Getting Started with Docker
+
+1. **Clone the repository:**
+
+   ```bash
+   git clone
+   cd manga-harbor-server
+   ```
+
+2. **Build the Docker Image:**
+
+   ```bash
+   docker build -t manga-harbor-server .
+   ```
+
+3. **Run the Docker Container:**
+
+   ```bash
+   docker run -p 9000:9000 manga-harbor-server
+   ```
+
    The application will start running at `http://localhost:9000`.
+
+## Configuration
+
+The application can be configured by modifying the `application.properties` file. The following properties are available:
+
+- **Server Port:**
+
+  ```properties
+  server.port=9000
+  ```
+
+  The port on which the application will run.
+
+  - **Logging:**
+  
+  ```properties
+   logging.level.com.logging=TRACE
+   logging.file.name=error.log
+   logging.pattern.file=%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){green} [%level] %c{1.} [%t] %m%n
+   ```
+
+   The logging level and file name can be configured here. The default logging level is `INFO`. The default log file is `error.log`.
+
+- **Maximum In-Memory Size:**
+
+  ```properties
+  spring.codec.max-in-memory-size=80512KB
+  ```
+
+  The maximum size of the in-memory buffer for storing manga images. The default value is `80512KB`.
+
+
+System properties can also be configured by modifying the `system.properties` file. The following properties are available:
+
+- **Java Runtime Version:**
+
+  ```properties
+  java.runtime.version=17
+  ```
+
+  The Java runtime version used by the application. The default value is `17`.
+
 
 ## API Endpoints
 
@@ -118,7 +190,7 @@ Manga Harbour Server seamlessly integrates with the Manga Harbor Client, providi
 
 3. **Configure API Endpoint in Manga Harbor Client (if necessary):**
 
-   If the Manga Harbor Server is running on a different port or host, update the API endpoint in the Manga Harbor Client. Open the `src/config/app.json` file and modify the `baseUrl` accordingly:
+   If the Manga Harbor Server is running on a different port or host, update the API endpoint in the Manga Harbor Client. Open the `src/config/config.json` file and modify the `baseUrl` accordingly:
 
    ```json
    {
