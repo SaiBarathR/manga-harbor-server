@@ -2,6 +2,8 @@
 
 Manga Harbour is a Spring Boot application that provides a manga downloading service. It allows users to download manga volumes and chapters as ZIP files. This application integrates with the MangaDex API to fetch manga details and images.
 
+For Client Repo checkout: https://github.com/SaiBarathR/manga-harbor
+
 ## Table of Contents
 
 - [Features](#features)
