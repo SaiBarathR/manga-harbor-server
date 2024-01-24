@@ -228,10 +228,3 @@ Contributions are welcome! If you have any feature requests, bug reports, or sug
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
-
----
-
-Feel free to customize this README further to include additional sections like deployment instructions, troubleshooting, or specific API documentation if needed. Good luck with your project!
-```
-
-This README now includes a section on how to integrate the `manga-harbor-server` with the `manga-harbor` client and provides instructions for running both applications together. Feel free to customize it further if needed!
