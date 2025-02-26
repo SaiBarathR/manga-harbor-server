@@ -11,7 +11,7 @@ public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**")
-                .allowedOrigins("http://localhost:3000", "https://mangaharbor.netlify.app/", "https://mangaharbor.tech/")
+                .allowedOrigins("http://localhost:3000", "https://mangaharbor.netlify.app/", "https://mangaharbor.tech/","https://mangaharbor.live/")
                 .allowedMethods("*").exposedHeaders("Content-Disposition", "file-size");
     }
 
